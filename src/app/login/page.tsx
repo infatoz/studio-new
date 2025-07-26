@@ -56,7 +56,6 @@ export default function LoginPage() {
     provider.addScope('https://www.googleapis.com/auth/classroom.announcements');
     try {
       await signInWithPopup(auth, provider);
-      router.push('/');
     } catch (error) {
       console.error('Error signing in with Google', error);
     }
@@ -65,7 +64,6 @@ export default function LoginPage() {
   const handleGuestSignIn = async () => {
     try {
       await signInAnonymously(auth);
-      router.push('/');
     } catch (error) {
       console.error('Error signing in as guest', error);
     }
