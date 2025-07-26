@@ -40,31 +40,11 @@ import { useAuth } from '@/contexts/auth-context';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Check, ChevronsUpDown } from 'lucide-react';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { cn } from '@/lib/utils';
-
-
-const grades = [
-    { value: '1', label: 'Grade 1' },
-    { value: '2', label: 'Grade 2' },
-    { value: '3', label: 'Grade 3' },
-    { value: '4', label: 'Grade 4' },
-    { value: '5', label: 'Grade 5' },
-    { value: '6', label: 'Grade 6' },
-    { value: '7', label: 'Grade 7' },
-    { value: '8', label: 'Grade 8' },
-    { value: '9', label: 'Grade 9' },
-    { value: '10', label: 'Grade 10' },
-    { value: '11', label: 'Grade 11' },
-    { value: '12', label: 'Grade 12' },
-] as const;
 
 
 const formSchema = z.object({
   documentContent: z.string().min(1, 'Please upload a file.'),
-  gradeLevels: z.array(z.string()).min(1, 'Please select at least one grade level.'),
+  gradeLevels: z.string().min(1, 'Please enter at least one grade level.'),
 });
 
 function fileToBase64(file: File): Promise<string> {
@@ -96,7 +76,7 @@ export default function DifferentiatedMaterialsPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       documentContent: '',
-      gradeLevels: [],
+      gradeLevels: '',
     },
   });
 
@@ -121,7 +101,6 @@ export default function DifferentiatedMaterialsPage() {
     try {
       const response = await createDifferentiatedMaterials({
         ...values,
-        gradeLevels: values.gradeLevels.join(', '),
       });
       setResult(response);
     } catch (error) {
@@ -319,62 +298,13 @@ export default function DifferentiatedMaterialsPage() {
                 control={form.control}
                 name="gradeLevels"
                 render={({ field }) => (
-                  <FormItem className="flex flex-col">
+                  <FormItem>
                     <FormLabel>Grade Levels</FormLabel>
-                     <Popover>
-                        <PopoverTrigger asChild>
-                        <FormControl>
-                            <Button
-                            variant="outline"
-                            role="combobox"
-                            className={cn(
-                                "w-full justify-between",
-                                !field.value?.length && "text-muted-foreground"
-                            )}
-                            >
-                            {field.value?.length > 0
-                                ? `${field.value.length} grade(s) selected`
-                                : "Select grade levels"}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                        </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-full p-0">
-                            <Command>
-                                <CommandInput placeholder="Search grades..." />
-                                <CommandList>
-                                <CommandEmpty>No grade found.</CommandEmpty>
-                                <CommandGroup>
-                                    {grades.map((grade) => (
-                                    <CommandItem
-                                        key={grade.value}
-                                        value={grade.value}
-                                        onSelect={(currentValue) => {
-                                            const currentValues = field.value || [];
-                                            const newValue = currentValues.includes(currentValue)
-                                                ? currentValues.filter((v) => v !== currentValue)
-                                                : [...currentValues, currentValue];
-                                            field.onChange(newValue.sort((a,b) => parseInt(a) - parseInt(b)));
-                                        }}
-                                    >
-                                        <Check
-                                        className={cn(
-                                            "mr-2 h-4 w-4",
-                                            field.value?.includes(grade.value)
-                                            ? "opacity-100"
-                                            : "opacity-0"
-                                        )}
-                                        />
-                                        {grade.label}
-                                    </CommandItem>
-                                    ))}
-                                </CommandGroup>
-                                </CommandList>
-                            </Command>
-                        </PopoverContent>
-                    </Popover>
+                    <FormControl>
+                      <Input placeholder="e.g., 1, 2, 3" {...field} />
+                    </FormControl>
                     <FormDescription>
-                      Select one or more grade levels.
+                      Enter one or more grade levels, separated by commas.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -493,5 +423,3 @@ export default function DifferentiatedMaterialsPage() {
     </>
   );
 }
-
-    
