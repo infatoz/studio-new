@@ -34,7 +34,7 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Bot, FileQuestion, GraduationCap, Send, UploadCloud } from 'lucide-react';
+import { Bot, FileQuestion, Send, UploadCloud } from 'lucide-react';
 import { getAuth, GoogleAuthProvider, reauthenticateWithPopup } from 'firebase/auth';
 import { useAuth } from '@/contexts/auth-context';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
