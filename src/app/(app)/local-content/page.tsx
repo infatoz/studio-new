@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
@@ -12,6 +13,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -34,7 +36,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Bot, Mic, MicOff } from 'lucide-react';
+import { Bot, GraduationCap, Mic, MicOff } from 'lucide-react';
 
 const indianLanguages = [
   'Assamese', 'Bengali', 'Bodo', 'Dogri', 'English', 'Gujarati', 'Hindi',
@@ -99,7 +101,6 @@ export default function LocalContentPage() {
       
       recognitionRef.current.onend = () => {
         if(isRecording) {
-            // Restart recognition if it stops unexpectedly
             recognitionRef.current.start();
         }
       };
@@ -145,6 +146,14 @@ export default function LocalContentPage() {
     } finally {
       setIsLoading(false);
     }
+  }
+
+  const handleSendToClassroom = () => {
+    // Placeholder function for Google Classroom integration
+    toast({
+        title: 'Coming Soon!',
+        description: 'Google Classroom integration is under development.'
+    })
   }
 
   return (
@@ -254,6 +263,14 @@ export default function LocalContentPage() {
             </div>
           )}
         </CardContent>
+        {result && (
+            <CardFooter>
+                <Button onClick={handleSendToClassroom} className='w-full'>
+                    <GraduationCap className='mr-2' />
+                    Send to Google Classroom
+                </Button>
+            </CardFooter>
+        )}
       </Card>
     </div>
   );

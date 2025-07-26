@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -20,10 +21,11 @@ import {
   Image as ImageIcon,
   LayoutDashboard,
   Lightbulb,
+  LogOut,
   User,
 } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -33,6 +35,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useAuth } from '@/contexts/auth-context';
+import { auth } from '@/lib/firebase';
 
 const navItems = [
   { href: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -48,6 +52,21 @@ const navItems = [
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await auth.signOut();
+    router.push('/login');
+  };
+
+  if (loading) {
+    return <div className="flex h-screen items-center justify-center">Loading...</div>;
+  }
+  
+  if (!user) {
+    return null;
+  }
 
   return (
     <SidebarProvider>
@@ -81,24 +100,24 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="justify-start w-full gap-2 p-2 h-auto">
                 <Avatar className="size-8">
-                  <AvatarImage src="https://placehold.co/100x100.png" alt="User" data-ai-hint="teacher profile" />
+                  <AvatarImage src={user.photoURL ?? ''} alt={user.displayName ?? 'User'} />
                   <AvatarFallback>
                     <User />
                   </AvatarFallback>
                 </Avatar>
                 <div className='text-left group-data-[collapsible=icon]:hidden'>
-                    <p className='text-sm font-medium'>SyntaxSanyasi</p>
-                    <p className='text-xs text-muted-foreground'>teacher@example.com</p>
+                    <p className='text-sm font-medium'>{user.displayName}</p>
+                    <p className='text-xs text-muted-foreground'>{user.email}</p>
                 </div>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent side="right" align="start">
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Profile</DropdownMenuItem>
-              <DropdownMenuItem>Settings</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>Logout</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleLogout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Logout</span>
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </SidebarFooter>
