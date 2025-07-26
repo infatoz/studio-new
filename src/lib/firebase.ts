@@ -8,8 +8,7 @@ const firebaseConfig = {
   storageBucket: "sahayak-ai-n9xrq.firebasestorage.app",
   apiKey: "AIzaSyAqaXXc3iKSMiQjY5HxsdPsGVO3akfJ7OQ",
   authDomain: "sahayak-ai-n9xrq.firebaseapp.com",
-  messagingSenderId: "941216237784",
-  measurementId: ""
+  messagingSenderId: "941216237784"
 };
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
