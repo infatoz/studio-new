@@ -34,7 +34,7 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Bot, FileQuestion, GraduationCap, UploadCloud } from 'lucide-react';
+import { Bot, FileQuestion, GraduationCap, Send, UploadCloud } from 'lucide-react';
 import { getAuth, GoogleAuthProvider, reauthenticateWithPopup } from 'firebase/auth';
 import { useAuth } from '@/contexts/auth-context';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -45,6 +45,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 const formSchema = z.object({
   documentContent: z.string().min(1, 'Please upload a file.'),
   gradeLevels: z.string().min(1, 'Please enter at least one grade level.'),
+  language: z.string().min(2, 'Please specify a language.').default('English'),
 });
 
 function fileToBase64(file: File): Promise<string> {
@@ -77,6 +78,7 @@ export default function DifferentiatedMaterialsPage() {
     defaultValues: {
       documentContent: '',
       gradeLevels: '',
+      language: 'English',
     },
   });
 
@@ -100,7 +102,8 @@ export default function DifferentiatedMaterialsPage() {
     setResult(null);
     try {
       const response = await createDifferentiatedMaterials({
-        ...values,
+        documentContent: values.documentContent,
+        gradeLevels: values.gradeLevels,
       });
       setResult(response);
     } catch (error) {
@@ -230,6 +233,7 @@ export default function DifferentiatedMaterialsPage() {
 
         const response = await createGoogleFormQuiz({
             worksheetContent,
+            language: form.getValues('language'),
             accessToken,
         });
 
@@ -264,7 +268,7 @@ export default function DifferentiatedMaterialsPage() {
         <CardHeader>
           <CardTitle>Create Differentiated Materials</CardTitle>
           <CardDescription>
-            Upload a document and select grade levels to get tailored
+            Upload a document, select grade levels, and generate tailored
             worksheets and quizzes.
           </CardDescription>
         </CardHeader>
@@ -295,94 +299,111 @@ export default function DifferentiatedMaterialsPage() {
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="gradeLevels"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Grade Levels</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., 1, 2, 3" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      Enter one or more grade levels, separated by commas.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" disabled={isLoading}>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <FormField
+                    control={form.control}
+                    name="gradeLevels"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Grade Levels</FormLabel>
+                        <FormControl>
+                        <Input placeholder="e.g., 1, 2, 3" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="language"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Quiz Language</FormLabel>
+                        <FormControl>
+                        <Input placeholder="e.g., English" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+              </div>
+
+              <Button type="submit" disabled={isLoading || isCreatingQuiz}>
                 {isLoading ? 'Generating...' : 'Generate Worksheets'}
               </Button>
             </form>
           </Form>
         </CardContent>
       </Card>
-      <Card className="min-h-[300px]">
-        <CardHeader>
-          <CardTitle>Generated Worksheets</CardTitle>
-          <CardDescription>
-            Results will appear here. Select a grade level to view the
-            worksheet.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading && (
-            <div className="space-y-4">
-              <Skeleton className="h-8 w-1/3" />
-              <Skeleton className="h-40 w-full" />
-            </div>
-          )}
-          {result?.worksheets && result.worksheets.length > 0 && (
-            <Tabs defaultValue={result.worksheets[0].gradeLevel} className="w-full">
-              <TabsList className="grid w-full" style={{gridTemplateColumns: `repeat(${result.worksheets.length}, minmax(0, 1fr))`}}>
+      <div className="space-y-4">
+        <Card className="min-h-[400px]">
+            <CardHeader>
+            <CardTitle>Generated Worksheets</CardTitle>
+            <CardDescription>
+                Results will appear here. Select a grade level to view the
+                worksheet.
+            </CardDescription>
+            </CardHeader>
+            <CardContent>
+            {isLoading && (
+                <div className="space-y-4 p-4">
+                <Skeleton className="h-10 w-1/3" />
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-40 w-full" />
+                </div>
+            )}
+            {result?.worksheets && result.worksheets.length > 0 && (
+                <Tabs defaultValue={result.worksheets[0].gradeLevel} className="w-full">
+                <TabsList className="grid w-full" style={{gridTemplateColumns: `repeat(${result.worksheets.length}, minmax(0, 1fr))`}}>
+                    {result.worksheets.map((ws) => (
+                    <TabsTrigger
+                        key={ws.gradeLevel}
+                        value={ws.gradeLevel}
+                    >
+                        Grade {ws.gradeLevel}
+                    </TabsTrigger>
+                    ))}
+                </TabsList>
                 {result.worksheets.map((ws) => (
-                  <TabsTrigger
+                    <TabsContent
                     key={ws.gradeLevel}
                     value={ws.gradeLevel}
-                  >
-                    Grade {ws.gradeLevel}
-                  </TabsTrigger>
+                    >
+                    <Card>
+                        <CardContent className="prose prose-sm max-w-none pt-4">
+                        <ScrollArea className='h-60 p-4 border rounded-md bg-background'>
+                            <pre className="whitespace-pre-wrap font-body">
+                            {ws.worksheetContent}
+                            </pre>
+                        </ScrollArea>
+                        </CardContent>
+                        {!isGuest && (
+                        <CardFooter className="flex-col sm:flex-row gap-2 pt-4">
+                            <Button onClick={() => handleCreateQuiz(ws.worksheetContent)} disabled={isCreatingQuiz || isPosting} className='w-full'>
+                                <FileQuestion className='mr-2'/>
+                                {isCreatingQuiz ? 'Creating Quiz...' : 'Create Google Form Quiz'}
+                            </Button>
+                            <Button onClick={() => handleFetchCourses(ws.worksheetContent)} disabled={isCreatingQuiz || isPosting} variant="secondary" className='w-full'>
+                                <Send className='mr-2' />
+                                Send to Classroom
+                            </Button>
+                        </CardFooter>
+                        )}
+                    </Card>
+                    </TabsContent>
                 ))}
-              </TabsList>
-              {result.worksheets.map((ws) => (
-                <TabsContent
-                  key={ws.gradeLevel}
-                  value={ws.gradeLevel}
-                >
-                  <Card>
-                    <CardContent className="prose prose-sm max-w-none p-4 pt-6 border rounded-md bg-background">
-                      <ScrollArea className='h-72'>
-                        <pre className="whitespace-pre-wrap font-body">
-                        {ws.worksheetContent}
-                        </pre>
-                      </ScrollArea>
-                    </CardContent>
-                    {!isGuest && (
-                    <CardFooter className="flex-col sm:flex-row gap-2 pt-4">
-                        <Button onClick={() => handleCreateQuiz(ws.worksheetContent)} disabled={isCreatingQuiz || isPosting} className='w-full'>
-                            <FileQuestion className='mr-2'/>
-                            {isCreatingQuiz ? 'Creating Quiz...' : 'Create Google Form Quiz'}
-                        </Button>
-                        <Button onClick={() => handleFetchCourses(ws.worksheetContent)} disabled={isCreatingQuiz || isPosting} variant="secondary" className='w-full'>
-                            <GraduationCap className='mr-2' />
-                            Send to Classroom
-                        </Button>
-                    </CardFooter>
-                    )}
-                  </Card>
-                </TabsContent>
-              ))}
-            </Tabs>
-          )}
-          {!isLoading && !result && (
-            <div className="flex flex-col items-center justify-center text-center text-muted-foreground p-8">
-              <Bot className="h-12 w-12 mb-4" />
-              <p>Your generated materials will be displayed here.</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                </Tabs>
+            )}
+            {!isLoading && !result && (
+                <div className="flex flex-col items-center justify-center text-center text-muted-foreground p-8">
+                <Bot className="h-12 w-12 mb-4" />
+                <p>Your generated materials will be displayed here.</p>
+                </div>
+            )}
+            </CardContent>
+        </Card>
+      </div>
+
     </div>
     {!isGuest && (
         <Dialog open={isClassroomOpen} onOpenChange={setIsClassroomOpen}>

@@ -104,6 +104,7 @@ const addQuestionsToFormTool = ai.defineTool(
 
 const CreateGoogleFormQuizInputSchema = z.object({
   worksheetContent: z.string().describe("The text content of the worksheet to base the quiz on."),
+  language: z.string().describe("The language for the quiz questions and options.").default('English'),
   accessToken: z.string().describe("The user's Google OAuth access token."),
 });
 export type CreateGoogleFormQuizInput = z.infer<typeof CreateGoogleFormQuizInputSchema>;
@@ -115,7 +116,7 @@ export type CreateGoogleFormQuizOutput = z.infer<typeof CreateGoogleFormQuizOutp
 
 
 const quizGenerationPrompt = `
-    Based on the following worksheet content, generate a 5-question multiple-choice quiz.
+    Based on the following worksheet content, generate a 5-question multiple-choice quiz in {{{language}}}.
     The quiz should be titled "Quiz".
     For each question, provide 4 options.
 
@@ -130,11 +131,11 @@ const createGoogleFormQuizFlow = ai.defineFlow(
     inputSchema: CreateGoogleFormQuizInputSchema,
     outputSchema: CreateGoogleFormQuizOutputSchema,
   },
-  async ({ worksheetContent, accessToken }) => {
+  async ({ worksheetContent, language, accessToken }) => {
 
     const llmResponse = await ai.generate({
         prompt: quizGenerationPrompt,
-        input: { worksheetContent },
+        input: { worksheetContent, language },
         tools: [createGoogleFormTool, addQuestionsToFormTool],
         model: 'googleai/gemini-1.5-flash',
         toolConfig: {
@@ -145,7 +146,13 @@ const createGoogleFormQuizFlow = ai.defineFlow(
     });
     
     // The model should call the tool and the output should be available in the toolCalls
-    const toolOutput = await llmResponse.toolCalls()?.[0]?.output();
+    const createFormCall = llmResponse.toolCalls()?.find(call => call.tool === 'createGoogleForm');
+
+    if (!createFormCall) {
+        throw new Error('Could not find the call to createGoogleForm tool.');
+    }
+
+    const toolOutput = await createFormCall.output();
     const formUrl = (toolOutput as any)?.formUrl;
 
     if (!formUrl) {
