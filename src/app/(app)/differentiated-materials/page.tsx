@@ -1,3 +1,4 @@
+
 'use client';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -419,10 +420,12 @@ export default function DifferentiatedMaterialsPage() {
                   value={ws.gradeLevel}
                 >
                   <Card>
-                    <CardContent className="prose prose-sm max-w-none p-4 pt-6 border-0 rounded-md h-96 overflow-auto bg-background">
+                    <CardContent className="prose prose-sm max-w-none p-4 pt-6 border rounded-md bg-background">
+                      <ScrollArea className='h-72'>
                         <pre className="whitespace-pre-wrap font-body">
                         {ws.worksheetContent}
                         </pre>
+                      </ScrollArea>
                     </CardContent>
                     {!isGuest && (
                     <CardFooter className="flex-col sm:flex-row gap-2 pt-4">
@@ -490,3 +493,5 @@ export default function DifferentiatedMaterialsPage() {
     </>
   );
 }
+
+    
