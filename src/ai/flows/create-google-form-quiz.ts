@@ -102,20 +102,17 @@ const addQuestionsToFormTool = ai.defineTool(
     }
 );
 
-const CreateGoogleFormQuizInputSchema = z.object({
+export const CreateGoogleFormQuizInputSchema = z.object({
   worksheetContent: z.string().describe("The text content of the worksheet to base the quiz on."),
   accessToken: z.string().describe("The user's Google OAuth access token."),
 });
 export type CreateGoogleFormQuizInput = z.infer<typeof CreateGoogleFormQuizInputSchema>;
 
-const CreateGoogleFormQuizOutputSchema = z.object({
+export const CreateGoogleFormQuizOutputSchema = z.object({
   formUrl: z.string().describe('The URL of the created Google Form quiz.'),
 });
 export type CreateGoogleFormQuizOutput = z.infer<typeof CreateGoogleFormQuizOutputSchema>;
 
-export async function createGoogleFormQuiz(input: CreateGoogleFormQuizInput): Promise<CreateGoogleFormQuizOutput> {
-  return createGoogleFormQuizFlow(input, {flowState: {accessToken: input.accessToken}});
-}
 
 const quizGenerationPrompt = `
     Based on the following worksheet content, generate a 5-question multiple-choice quiz.
@@ -138,11 +135,9 @@ const createGoogleFormQuizFlow = ai.defineFlow(
     const llmResponse = await ai.generate({
         prompt: quizGenerationPrompt.replace('{{{worksheetContent}}}', worksheetContent),
         tools: [createGoogleFormTool, addQuestionsToFormTool],
-        model: 'googleai/gemini-2.0-flash'
+        model: 'googleai/gemini-1.5-flash'
     });
     
-    // The `output` of a tool call can be of any type.
-    // Here we are expecting it to have `formUrl` but it needs to be cast to `any` first.
     const toolOutput = llmResponse.toolCalls?.find(tc => tc.tool === 'createGoogleFormTool')?.output as any;
 
     if (!toolOutput || !toolOutput.formUrl) {
@@ -152,3 +147,8 @@ const createGoogleFormQuizFlow = ai.defineFlow(
     return { formUrl: toolOutput.formUrl };
   }
 );
+
+
+export async function createGoogleFormQuiz(input: CreateGoogleFormQuizInput): Promise<CreateGoogleFormQuizOutput> {
+  return createGoogleFormQuizFlow(input, {flowState: {accessToken: input.accessToken}});
+}

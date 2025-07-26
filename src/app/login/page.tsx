@@ -94,7 +94,7 @@ export default function LoginPage() {
         <CardContent className='flex flex-col gap-4'>
           <Button onClick={handleGoogleSignIn} className="w-full">
             <GoogleIcon />
-            <span>Sign in with Google</span>
+            <span className='ml-2'>Sign in with Google</span>
           </Button>
           <div className='flex items-center gap-4'>
             <Separator className='flex-1' />

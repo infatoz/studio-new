@@ -238,6 +238,7 @@ export default function DifferentiatedMaterialsPage() {
                 title: 'Quiz Created!',
                 description: 'Your Google Form quiz has been created successfully.'
             });
+            // Automatically open the classroom dialog to share the quiz link
             await handleFetchCourses(`I have created a quiz for you. Please complete it here: ${response.formUrl}`);
         } else {
             throw new Error('Failed to get form URL from response.');
