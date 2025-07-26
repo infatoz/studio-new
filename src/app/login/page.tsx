@@ -52,6 +52,8 @@ export default function LoginPage() {
 
   const handleGoogleSignIn = async () => {
     const provider = new GoogleAuthProvider();
+    provider.addScope('https://www.googleapis.com/auth/classroom.courses.readonly');
+    provider.addScope('https://www.googleapis.com/auth/classroom.announcements');
     try {
       await signInWithPopup(auth, provider);
       router.push('/');

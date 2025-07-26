@@ -38,6 +38,17 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Bot, GraduationCap, Mic, MicOff } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
+import { GoogleAuthProvider, getAuth, reauthenticateWithPopup } from 'firebase/auth';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const indianLanguages = [
   'Assamese', 'Bengali', 'Bodo', 'Dogri', 'English', 'Gujarati', 'Hindi',
@@ -62,6 +73,11 @@ export default function LocalContentPage() {
   const recognitionRef = useRef<any>(null);
   const { user } = useAuth();
   const isGuest = user?.isAnonymous ?? true;
+
+  const [courses, setCourses] = useState<any[]>([]);
+  const [selectedCourse, setSelectedCourse] = useState<string>('');
+  const [isClassroomOpen, setIsClassroomOpen] = useState(false);
+  const [isPosting, setIsPosting] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -151,13 +167,95 @@ export default function LocalContentPage() {
     }
   }
 
-  const handleSendToClassroom = () => {
-    // Placeholder function for Google Classroom integration
-    toast({
-        title: 'Coming Soon!',
-        description: 'Google Classroom integration is under development.'
-    })
-  }
+  const getAccessToken = async () => {
+    if (!user) return null;
+    const auth = getAuth();
+    const provider = new GoogleAuthProvider();
+    provider.addScope('https://www.googleapis.com/auth/classroom.courses.readonly');
+    provider.addScope('https://www.googleapis.com/auth/classroom.announcements');
+
+    try {
+        const result = await reauthenticateWithPopup(auth.currentUser!, provider);
+        const credential = GoogleAuthProvider.credentialFromResult(result);
+        return credential?.accessToken;
+    } catch (error) {
+        console.error('Error getting access token', error);
+        toast({
+            title: 'Authentication Error',
+            description: 'Could not get permission for Google Classroom. Please try again.',
+            variant: 'destructive',
+        });
+        return null;
+    }
+  };
+  
+  const handleFetchCourses = async () => {
+    const accessToken = await getAccessToken();
+    if (!accessToken) return;
+
+    try {
+      const response = await fetch('https://classroom.googleapis.com/v1/courses?courseStates=ACTIVE', {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch courses');
+      }
+      const data = await response.json();
+      setCourses(data.courses || []);
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch Google Classroom courses.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handlePostToClassroom = async () => {
+    if (!selectedCourse || !result?.content) return;
+    
+    setIsPosting(true);
+    const accessToken = await getAccessToken();
+    if (!accessToken) {
+        setIsPosting(false);
+        return;
+    };
+
+    try {
+        const response = await fetch(`https://classroom.googleapis.com/v1/courses/${selectedCourse}/announcements`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                text: result.content,
+            }),
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error('Failed to post announcement:', errorData);
+            throw new Error('Failed to post announcement');
+        }
+        toast({
+            title: 'Success!',
+            description: 'Content posted to your Google Classroom.',
+        });
+        setIsClassroomOpen(false);
+    } catch (error) {
+        console.error(error);
+        toast({
+            title: 'Error',
+            description: 'Failed to post to Google Classroom. Please try again.',
+            variant: 'destructive',
+        });
+    } finally {
+        setIsPosting(false);
+    }
+  };
 
   return (
     <div className="grid md:grid-cols-2 gap-8 items-start">
@@ -268,13 +366,50 @@ export default function LocalContentPage() {
         </CardContent>
         {result && !isGuest && (
             <CardFooter>
-                <Button onClick={handleSendToClassroom} className='w-full'>
-                    <GraduationCap className='mr-2' />
-                    Send to Google Classroom
-                </Button>
+                <Dialog open={isClassroomOpen} onOpenChange={setIsClassroomOpen}>
+                    <DialogTrigger asChild>
+                        <Button onClick={handleFetchCourses} className='w-full'>
+                            <GraduationCap className='mr-2' />
+                            Send to Google Classroom
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Send to Google Classroom</DialogTitle>
+                            <DialogDescription>
+                                Select a course to post this content as an announcement.
+                            </DialogDescription>
+                        </DialogHeader>
+                        {courses.length > 0 ? (
+                            <div className="space-y-4">
+                                <ScrollArea className="h-64">
+                                    <RadioGroup onValueChange={setSelectedCourse} value={selectedCourse} className='p-1'>
+                                    {courses.map((course) => (
+                                        <div key={course.id} className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted">
+                                            <RadioGroupItem value={course.id} id={course.id} />
+                                            <FormLabel htmlFor={course.id} className="font-normal flex-1 cursor-pointer">
+                                                {course.name}
+                                                <p className="text-xs text-muted-foreground">{course.section}</p>
+                                            </FormLabel>
+                                        </div>
+                                    ))}
+                                    </RadioGroup>
+                                </ScrollArea>
+                                <Button onClick={handlePostToClassroom} disabled={!selectedCourse || isPosting} className="w-full">
+                                    {isPosting ? 'Posting...' : 'Post to Classroom'}
+                                </Button>
+                            </div>
+                        ) : (
+                            <div className='text-center text-muted-foreground p-8'>
+                                <p>No active courses found.</p>
+                            </div>
+                        )}
+                    </DialogContent>
+                </Dialog>
             </CardFooter>
         )}
       </Card>
     </div>
   );
 }
+
