@@ -37,6 +37,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Bot, GraduationCap, Mic, MicOff } from 'lucide-react';
+import { useAuth } from '@/contexts/auth-context';
 
 const indianLanguages = [
   'Assamese', 'Bengali', 'Bodo', 'Dogri', 'English', 'Gujarati', 'Hindi',
@@ -59,6 +60,8 @@ export default function LocalContentPage() {
   const [isRecording, setIsRecording] = useState(false);
   const { toast } = useToast();
   const recognitionRef = useRef<any>(null);
+  const { user } = useAuth();
+  const isGuest = user?.isAnonymous ?? true;
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -263,7 +266,7 @@ export default function LocalContentPage() {
             </div>
           )}
         </CardContent>
-        {result && (
+        {result && !isGuest && (
             <CardFooter>
                 <Button onClick={handleSendToClassroom} className='w-full'>
                     <GraduationCap className='mr-2' />

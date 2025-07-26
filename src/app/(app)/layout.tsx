@@ -37,6 +37,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/auth-context';
 import { auth } from '@/lib/firebase';
+import { Badge } from '@/components/ui/badge';
 
 const navItems = [
   { href: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -67,6 +68,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (!user) {
     return null;
   }
+
+  const isGuest = user.isAnonymous;
 
   return (
     <SidebarProvider>
@@ -106,9 +109,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   </AvatarFallback>
                 </Avatar>
                 <div className='text-left group-data-[collapsible=icon]:hidden'>
-                    <p className='text-sm font-medium'>{user.displayName}</p>
-                    <p className='text-xs text-muted-foreground'>{user.email}</p>
+                    <p className='text-sm font-medium'>{isGuest ? "Guest User" : user.displayName}</p>
+                    <p className='text-xs text-muted-foreground'>{ isGuest ? "" : user.email}</p>
                 </div>
+                {isGuest && <Badge variant="secondary" className="ml-auto group-data-[collapsible=icon]:hidden">Guest</Badge>}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent side="right" align="start">
