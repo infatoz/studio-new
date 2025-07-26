@@ -102,13 +102,13 @@ const addQuestionsToFormTool = ai.defineTool(
     }
 );
 
-export const CreateGoogleFormQuizInputSchema = z.object({
+const CreateGoogleFormQuizInputSchema = z.object({
   worksheetContent: z.string().describe("The text content of the worksheet to base the quiz on."),
   accessToken: z.string().describe("The user's Google OAuth access token."),
 });
 export type CreateGoogleFormQuizInput = z.infer<typeof CreateGoogleFormQuizInputSchema>;
 
-export const CreateGoogleFormQuizOutputSchema = z.object({
+const CreateGoogleFormQuizOutputSchema = z.object({
   formUrl: z.string().describe('The URL of the created Google Form quiz.'),
 });
 export type CreateGoogleFormQuizOutput = z.infer<typeof CreateGoogleFormQuizOutputSchema>;
@@ -129,26 +129,34 @@ const createGoogleFormQuizFlow = ai.defineFlow(
     name: 'createGoogleFormQuizFlow',
     inputSchema: CreateGoogleFormQuizInputSchema,
     outputSchema: CreateGoogleFormQuizOutputSchema,
-    tools: [createGoogleFormTool, addQuestionsToFormTool],
   },
-  async ({ worksheetContent }) => {
+  async ({ worksheetContent, accessToken }) => {
+
     const llmResponse = await ai.generate({
-        prompt: quizGenerationPrompt.replace('{{{worksheetContent}}}', worksheetContent),
+        prompt: quizGenerationPrompt,
+        input: { worksheetContent },
         tools: [createGoogleFormTool, addQuestionsToFormTool],
-        model: 'googleai/gemini-1.5-flash'
+        model: 'googleai/gemini-1.5-flash',
+        toolConfig: {
+            definition: {
+                flowState: { accessToken }
+            }
+        }
     });
     
-    const toolOutput = llmResponse.toolCalls?.find(tc => tc.tool === 'createGoogleFormTool')?.output as any;
+    // The model should call the tool and the output should be available in the toolCalls
+    const toolOutput = await llmResponse.toolCalls()?.[0]?.output();
+    const formUrl = (toolOutput as any)?.formUrl;
 
-    if (!toolOutput || !toolOutput.formUrl) {
+    if (!formUrl) {
       throw new Error('Could not create Google Form or find formUrl.');
     }
 
-    return { formUrl: toolOutput.formUrl };
+    return { formUrl };
   }
 );
 
 
 export async function createGoogleFormQuiz(input: CreateGoogleFormQuizInput): Promise<CreateGoogleFormQuizOutput> {
-  return createGoogleFormQuizFlow(input, {flowState: {accessToken: input.accessToken}});
+  return createGoogleFormQuizFlow(input);
 }
