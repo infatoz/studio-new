@@ -36,7 +36,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Bot, FileQuestion, GraduationCap, UploadCloud } from 'lucide-react';
 import { getAuth, GoogleAuthProvider, reauthenticateWithPopup } from 'firebase/auth';
 import { useAuth } from '@/contexts/auth-context';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -75,21 +75,6 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
-async function extractTextFromFile(file: File): Promise<string> {
-  if (file.type.startsWith('image/')) {
-    return fileToBase64(file);
-  }
-  // For PDF and DOCX, we would ideally extract text.
-  // This is a placeholder as frontend text extraction is complex.
-  // The Genkit flow is set up to handle a Data URI for images.
-  // For now, we will show an error for non-image files.
-  if (file.type === 'application/pdf' || file.type.includes('document')) {
-      throw new Error("Text extraction from PDF/DOCX is not implemented in this version. Please upload an image.");
-  }
-  return fileToBase64(file);
-}
-
-
 export default function DifferentiatedMaterialsPage() {
   const [result, setResult] =
     useState<CreateDifferentiatedMaterialsOutput | null>(null);
@@ -121,11 +106,10 @@ export default function DifferentiatedMaterialsPage() {
     const file = e.target.files?.[0];
     if (file) {
       try {
-        // This is simplified. Real text extraction would be needed for PDF/DOCX.
         const content = await fileToBase64(file);
         fieldChange(content);
       } catch (error: any) {
-        toast({ title: 'Error', description: error.message, variant: 'destructive' });
+        toast({ title: 'Error uploading file', description: error.message, variant: 'destructive' });
       }
     }
   };
@@ -152,7 +136,7 @@ export default function DifferentiatedMaterialsPage() {
   }
 
   const getAccessToken = async () => {
-    if (!user) return null;
+    if (!user || user.isAnonymous) return null;
     const auth = getAuth();
     const provider = new GoogleAuthProvider();
     provider.addScope('https://www.googleapis.com/auth/classroom.courses.readonly');
@@ -177,8 +161,14 @@ export default function DifferentiatedMaterialsPage() {
 
   const handleFetchCourses = async (content: string) => {
     setContentToPost(content);
+    setIsClassroomOpen(true);
+    if (courses.length > 0) return; // Don't re-fetch if we already have courses
+
     const accessToken = await getAccessToken();
-    if (!accessToken) return;
+    if (!accessToken) {
+        setIsClassroomOpen(false);
+        return;
+    }
 
     try {
       const response = await fetch('https://classroom.googleapis.com/v1/courses?courseStates=ACTIVE', {
@@ -191,7 +181,6 @@ export default function DifferentiatedMaterialsPage() {
       }
       const data = await response.json();
       setCourses(data.courses || []);
-      setIsClassroomOpen(true);
     } catch (error) {
       console.error(error);
       toast({
@@ -199,6 +188,7 @@ export default function DifferentiatedMaterialsPage() {
         description: 'Failed to fetch Google Classroom courses.',
         variant: 'destructive',
       });
+      setIsClassroomOpen(false);
     }
   };
   
@@ -233,6 +223,9 @@ export default function DifferentiatedMaterialsPage() {
             description: 'Content posted to your Google Classroom.',
         });
         setIsClassroomOpen(false);
+        setSelectedCourse('');
+        setContentToPost('');
+
     } catch (error) {
         console.error(error);
         toast({
@@ -354,13 +347,13 @@ export default function DifferentiatedMaterialsPage() {
                                     {grades.map((grade) => (
                                     <CommandItem
                                         key={grade.value}
-                                        value={grade.label}
-                                        onSelect={() => {
+                                        value={grade.value}
+                                        onSelect={(currentValue) => {
                                             const currentValues = field.value || [];
-                                            const newValue = currentValues.includes(grade.value)
-                                                ? currentValues.filter((v) => v !== grade.value)
-                                                : [...currentValues, grade.value];
-                                            field.onChange(newValue);
+                                            const newValue = currentValues.includes(currentValue)
+                                                ? currentValues.filter((v) => v !== currentValue)
+                                                : [...currentValues, currentValue];
+                                            field.onChange(newValue.sort((a,b) => parseInt(a) - parseInt(b)));
                                         }}
                                     >
                                         <Check
@@ -409,8 +402,8 @@ export default function DifferentiatedMaterialsPage() {
             </div>
           )}
           {result?.worksheets && result.worksheets.length > 0 && (
-            <Tabs defaultValue={result.worksheets[0].gradeLevel}>
-              <TabsList className="grid w-full grid-cols-3">
+            <Tabs defaultValue={result.worksheets[0].gradeLevel} className="w-full">
+              <TabsList className="grid w-full" style={{gridTemplateColumns: `repeat(${result.worksheets.length}, minmax(0, 1fr))`}}>
                 {result.worksheets.map((ws) => (
                   <TabsTrigger
                     key={ws.gradeLevel}
@@ -475,7 +468,7 @@ export default function DifferentiatedMaterialsPage() {
                                     <RadioGroupItem value={course.id} id={course.id} />
                                     <FormLabel htmlFor={course.id} className="font-normal flex-1 cursor-pointer">
                                         {course.name}
-                                        <p className="text-xs text-muted-foreground">{course.section}</p>
+                                        <p className="text-xs text-muted-foreground">{course.section || 'No section'}</p>
                                     </FormLabel>
                                 </div>
                             ))}
@@ -486,8 +479,8 @@ export default function DifferentiatedMaterialsPage() {
                         </Button>
                     </div>
                 ) : (
-                    <div className='text-center text-muted-foreground p-8'>
-                        <p>No active courses found.</p>
+                     <div className='text-center text-muted-foreground p-8'>
+                        <p>No active courses found, or still loading...</p>
                         <Button onClick={() => handleFetchCourses(contentToPost)} variant="link">Refresh courses</Button>
                     </div>
                 )}

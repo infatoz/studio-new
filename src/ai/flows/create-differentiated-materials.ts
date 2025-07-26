@@ -47,6 +47,8 @@ You will use the provided document content (from a textbook page image, PDF, or 
 
 Create worksheets that are appropriate for each grade level, with questions and activities that align with their learning level.
 
+The document may be an image, so you will need to perform OCR if necessary.
+
 Document Content: {{media url=documentContent}}
 Grade Levels: {{{gradeLevels}}}
 
