@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -18,30 +18,45 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Bot } from 'lucide-react';
+import { Bot, Mic, MicOff } from 'lucide-react';
+
+const indianLanguages = [
+  'Assamese', 'Bengali', 'Bodo', 'Dogri', 'English', 'Gujarati', 'Hindi',
+  'Kannada', 'Kashmiri', 'Konkani', 'Maithili', 'Malayalam',
+  'Manipuri', 'Marathi', 'Nepali', 'Odia', 'Punjabi', 'Sanskrit',
+  'Santali', 'Sindhi', 'Tamil', 'Telugu', 'Urdu'
+];
 
 const formSchema = z.object({
-  language: z.string().min(2, 'Please enter a language.'),
+  language: z.string().min(1, 'Please select a language.'),
   request: z
     .string()
-    .min(10, 'Request must be at least 10 characters long.'),
+    .min(20, 'Request must be at least 20 characters long to provide enough context.')
+    .max(500, 'Request must be 500 characters or less.'),
 });
 
 export default function LocalContentPage() {
-  const [result, setResult] = useState<GenerateLocalContentOutput | null>(
-    null
-  );
+  const [result, setResult] = useState<GenerateLocalContentOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const { toast } = useToast();
+  const recognitionRef = useRef<any>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -50,6 +65,69 @@ export default function LocalContentPage() {
       request: '',
     },
   });
+
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = true;
+      recognitionRef.current.interimResults = true;
+      recognitionRef.current.lang = 'en-US';
+
+      recognitionRef.current.onresult = (event: any) => {
+        let interimTranscript = '';
+        let finalTranscript = form.getValues('request');
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript + '. ';
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
+        }
+        form.setValue('request', finalTranscript + interimTranscript, { shouldValidate: true });
+      };
+
+      recognitionRef.current.onerror = (event: any) => {
+        console.error('Speech recognition error', event.error);
+        toast({
+          title: 'Speech Recognition Error',
+          description: `An error occurred: ${event.error}. Please try again.`,
+          variant: 'destructive',
+        });
+        setIsRecording(false);
+      };
+      
+      recognitionRef.current.onend = () => {
+        if(isRecording) {
+            // Restart recognition if it stops unexpectedly
+            recognitionRef.current.start();
+        }
+      };
+
+    } else {
+        toast({
+            title: 'Browser Not Supported',
+            description: 'Speech recognition is not supported in your browser.',
+            variant: 'destructive'
+        })
+    }
+
+    return () => {
+        if (recognitionRef.current) {
+            recognitionRef.current.stop();
+        }
+    }
+  }, [form, toast, isRecording]);
+
+  const toggleRecording = () => {
+    if (isRecording) {
+      recognitionRef.current?.stop();
+      setIsRecording(false);
+    } else {
+      recognitionRef.current?.start();
+      setIsRecording(true);
+    }
+  };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
@@ -87,9 +165,23 @@ export default function LocalContentPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Language</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Marathi, Hindi" {...field} />
-                    </FormControl>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a language" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {indianLanguages.map((lang) => (
+                          <SelectItem key={lang} value={lang}>
+                            {lang}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Select the language for the content.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -101,12 +193,27 @@ export default function LocalContentPage() {
                   <FormItem>
                     <FormLabel>Content Request</FormLabel>
                     <FormControl>
-                      <Textarea
-                        placeholder="e.g., Create a story about farmers to explain different soil types"
-                        rows={5}
-                        {...field}
-                      />
+                      <div className="relative">
+                        <Textarea
+                          placeholder="e.g., Create a story about farmers to explain different soil types"
+                          rows={5}
+                          {...field}
+                        />
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant={isRecording ? 'destructive' : 'outline'}
+                          onClick={toggleRecording}
+                          className="absolute bottom-2 right-2"
+                        >
+                          {isRecording ? <MicOff /> : <Mic />}
+                          <span className="sr-only">{isRecording ? 'Stop recording' : 'Start recording'}</span>
+                        </Button>
+                      </div>
                     </FormControl>
+                     <FormDescription>
+                      Describe the content you need, or use the mic to speak your request.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
