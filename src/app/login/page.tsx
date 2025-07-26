@@ -54,6 +54,7 @@ export default function LoginPage() {
     const provider = new GoogleAuthProvider();
     provider.addScope('https://www.googleapis.com/auth/classroom.courses.readonly');
     provider.addScope('https://www.googleapis.com/auth/classroom.announcements');
+    provider.addScope('https://www.googleapis.com/auth/forms.body');
     try {
       await signInWithPopup(auth, provider);
     } catch (error) {

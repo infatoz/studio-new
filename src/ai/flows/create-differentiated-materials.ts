@@ -12,10 +12,10 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const CreateDifferentiatedMaterialsInputSchema = z.object({
-  textbookPageImage: z
+  documentContent: z
     .string()
     .describe(
-      "A photo of a textbook page, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+      "A photo of a textbook page or document text, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
   gradeLevels: z
     .string()
@@ -43,11 +43,11 @@ const prompt = ai.definePrompt({
   output: {schema: CreateDifferentiatedMaterialsOutputSchema},
   prompt: `You are an expert teacher specializing in creating differentiated learning materials for multi-grade classrooms.
 
-You will use the provided textbook page image and the list of grade levels to generate tailored worksheets for each grade level.
+You will use the provided document content (from a textbook page image, PDF, or DOCX) and the list of grade levels to generate tailored worksheets for each grade level.
 
 Create worksheets that are appropriate for each grade level, with questions and activities that align with their learning level.
 
-Textbook Page Image: {{media url=textbookPageImage}}
+Document Content: {{media url=documentContent}}
 Grade Levels: {{{gradeLevels}}}
 
 Output the worksheets in JSON format. The JSON should be an array of objects, with each object containing the gradeLevel and the worksheetContent.
