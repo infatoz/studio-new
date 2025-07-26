@@ -102,13 +102,13 @@ const addQuestionsToFormTool = ai.defineTool(
     }
 );
 
-export const CreateGoogleFormQuizInputSchema = z.object({
+const CreateGoogleFormQuizInputSchema = z.object({
   worksheetContent: z.string().describe("The text content of the worksheet to base the quiz on."),
   accessToken: z.string().describe("The user's Google OAuth access token."),
 });
 export type CreateGoogleFormQuizInput = z.infer<typeof CreateGoogleFormQuizInputSchema>;
 
-export const CreateGoogleFormQuizOutputSchema = z.object({
+const CreateGoogleFormQuizOutputSchema = z.object({
   formUrl: z.string().describe('The URL of the created Google Form quiz.'),
 });
 export type CreateGoogleFormQuizOutput = z.infer<typeof CreateGoogleFormQuizOutputSchema>;
@@ -127,7 +127,7 @@ const quizGenerationPrompt = `
 `;
 
 
-export const createGoogleFormQuizFlow = ai.defineFlow(
+const createGoogleFormQuizFlow = ai.defineFlow(
   {
     name: 'createGoogleFormQuizFlow',
     inputSchema: CreateGoogleFormQuizInputSchema,
@@ -141,12 +141,14 @@ export const createGoogleFormQuizFlow = ai.defineFlow(
         model: 'googleai/gemini-2.0-flash'
     });
     
-    const formUrl = llmResponse.toolCalls.find(tc => tc.tool === 'createGoogleForm')?.output.formUrl;
+    // The `output` of a tool call can be of any type.
+    // Here we are expecting it to have `formUrl` but it needs to be cast to `any` first.
+    const toolOutput = llmResponse.toolCalls?.find(tc => tc.tool === 'createGoogleFormTool')?.output as any;
 
-    if (!formUrl) {
-      throw new Error('Could not create Google Form.');
+    if (!toolOutput || !toolOutput.formUrl) {
+      throw new Error('Could not create Google Form or find formUrl.');
     }
 
-    return { formUrl };
+    return { formUrl: toolOutput.formUrl };
   }
 );
