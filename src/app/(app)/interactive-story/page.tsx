@@ -34,11 +34,12 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const voices = [
-    { id: 'Algenib', name: 'Algenib (Female)' },
-    { id: 'Achernar', name: 'Achernar (Male)' },
-    { id: 'Enif', name: 'Enif (Female)' },
-    { id: 'Salm', name: 'Salm (Male)' },
-    { id: 'Mirfak', name: 'Mirfak (Male)' },
+    { id: 'algenib', name: 'Algenib (Female)' },
+    { id: 'achernar', name: 'Achernar (Male)' },
+    { id: 'erinome', name: 'Erinome (Female)' },
+    { id: 'gacrux', name: 'Gacrux (Male)' },
+    { id: 'kore', name: 'Kore (Female)' },
+    { id: 'mirfak', name: 'Mirfak (Male)' },
 ];
 
 const languages = [
@@ -59,7 +60,7 @@ const randomTopics = [
 const formSchema = z.object({
   topic: z.string().min(3, 'Please enter a topic for the story.'),
   language: z.string().min(2, 'Please specify a language.').default('English'),
-  voice: z.string().min(1, 'Please select a voice.').default('Algenib'),
+  voice: z.string().min(1, 'Please select a voice.').default('algenib'),
 });
 
 const suggestionSchema = z.object({
@@ -78,7 +79,7 @@ export default function InteractiveStoryPage() {
     defaultValues: {
       topic: '',
       language: 'English',
-      voice: 'Algenib',
+      voice: 'algenib',
     },
   });
 
@@ -137,7 +138,7 @@ export default function InteractiveStoryPage() {
             variant: 'destructive',
         });
     } finally {
-        isLoading(false);
+      setIsLoading(false);
     }
   }
 
@@ -363,3 +364,5 @@ export default function InteractiveStoryPage() {
     </div>
   );
 }
+
+    
