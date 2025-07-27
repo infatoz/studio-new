@@ -1,10 +1,10 @@
+
 'use client';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {
-  instantKnowledgeBase,
   type InstantKnowledgeBaseOutput,
 } from '@/ai/flows/instant-knowledge-base';
 import { Button } from '@/components/ui/button';
@@ -33,6 +33,19 @@ const formSchema = z.object({
   question: z.string().min(10, 'Question must be at least 10 characters.'),
   localLanguage: z.string().min(2, 'Please enter a language.'),
 });
+
+// Simulated instantKnowledgeBase function
+async function instantKnowledgeBase(
+    values: z.infer<typeof formSchema>
+  ): Promise<InstantKnowledgeBaseOutput> {
+    return new Promise(resolve => {
+        setTimeout(() => {
+            resolve({
+                explanation: `Here is a simulated explanation in ${values.localLanguage} for the question: "${values.question}". This explanation uses simple terms and easy-to-understand analogies, making it perfect for students. For example, to explain why the sky is blue, one might compare the atmosphere to a sieve that scatters blue light more than other colors, just like a sieve separates small particles from larger ones.`
+            })
+        }, 1500)
+    })
+}
 
 export default function KnowledgeBasePage() {
   const [result, setResult] = useState<InstantKnowledgeBaseOutput | null>(
@@ -74,7 +87,7 @@ export default function KnowledgeBasePage() {
           <CardTitle>Instant Knowledge Base</CardTitle>
           <CardDescription>
             Ask a complex question and get a simple explanation in your local
-            language.
+            language. (Simulated)
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -111,7 +124,7 @@ export default function KnowledgeBasePage() {
                 )}
               />
               <Button type="submit" disabled={isLoading}>
-                {isLoading ? 'Generating...' : 'Get Explanation'}
+                {isLoading ? 'Simulating...' : 'Get Explanation'}
               </Button>
             </form>
           </Form>

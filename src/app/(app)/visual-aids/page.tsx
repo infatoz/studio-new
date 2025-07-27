@@ -1,10 +1,10 @@
+
 'use client';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {
-  designVisualAids,
   type DesignVisualAidsOutput,
 } from '@/ai/flows/design-visual-aids';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,20 @@ const formSchema = z.object({
     .string()
     .min(10, 'Description must be at least 10 characters.'),
 });
+
+// Simulated designVisualAids function
+async function designVisualAids(
+    _values: z.infer<typeof formSchema>
+  ): Promise<DesignVisualAidsOutput> {
+    return new Promise((resolve) => {
+        setTimeout(() => {
+            resolve({
+                // Using a real placeholder service to simulate the image
+                image: 'https://placehold.co/400x400.png',
+            });
+        }, 2000);
+    });
+}
 
 export default function VisualAidsPage() {
   const [result, setResult] = useState<DesignVisualAidsOutput | null>(null);
@@ -72,7 +86,7 @@ export default function VisualAidsPage() {
           <CardTitle>Design Visual Aids</CardTitle>
           <CardDescription>
             Describe a visual aid, and the AI will generate a simple image for
-            your blackboard.
+            your blackboard. (Simulated)
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -96,7 +110,7 @@ export default function VisualAidsPage() {
                 )}
               />
               <Button type="submit" disabled={isLoading}>
-                {isLoading ? 'Designing...' : 'Design Visual Aid'}
+                {isLoading ? 'Simulating...' : 'Design Visual Aid'}
               </Button>
             </form>
           </Form>

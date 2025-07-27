@@ -5,11 +5,10 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {
-  createDifferentiatedMaterials,
   type CreateDifferentiatedMaterialsOutput,
 } from '@/ai/flows/create-differentiated-materials';
 import {
-  createGoogleFormQuiz,
+    type CreateGoogleFormQuizOutput,
 } from '@/ai/flows/create-google-form-quiz';
 
 import { Button } from '@/components/ui/button';
@@ -35,7 +34,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Bot, FileQuestion, Send, UploadCloud } from 'lucide-react';
-import { getAuth, GoogleAuthProvider, reauthenticateWithPopup } from 'firebase/auth';
 import { useAuth } from '@/contexts/auth-context';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -47,6 +45,34 @@ const formSchema = z.object({
   gradeLevels: z.string().min(1, 'Please enter at least one grade level.'),
   language: z.string().min(2, 'Please specify a language.').default('English'),
 });
+
+
+// Simulated AI flow functions
+async function createDifferentiatedMaterials(
+    _values: z.infer<typeof formSchema>
+  ): Promise<CreateDifferentiatedMaterialsOutput> {
+    const grades = _values.gradeLevels.split(',').map(g => g.trim());
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve({
+          worksheets: grades.map(grade => ({
+            gradeLevel: grade,
+            worksheetContent: `This is a simulated worksheet for Grade ${grade}. It includes age-appropriate questions and activities based on the uploaded document. The content covers key concepts in a way that is easy for Grade ${grade} students to understand.`
+          }))
+        });
+      }, 2000);
+    });
+}
+
+async function createGoogleFormQuiz(
+    _input: { worksheetContent: string; language: string; accessToken: string | null }
+): Promise<CreateGoogleFormQuizOutput> {
+    return new Promise((resolve) => {
+        setTimeout(() => {
+            resolve({ formUrl: 'https://docs.google.com/forms/d/e/simulated-form-link/viewform' });
+        }, 2500);
+    });
+}
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -88,12 +114,9 @@ export default function DifferentiatedMaterialsPage() {
   ) => {
     const file = e.target.files?.[0];
     if (file) {
-      try {
-        const content = await fileToBase64(file);
-        fieldChange(content);
-      } catch (error: any) {
-        toast({ title: 'Error uploading file', description: error.message, variant: 'destructive' });
-      }
+        toast({ title: 'File Selected!', description: `Simulating upload of '${file.name}'.`});
+        // In a real scenario, we'd process the file. Here we just set a dummy string.
+        fieldChange('simulated-file-content-as-base64');
     }
   };
 
@@ -101,10 +124,7 @@ export default function DifferentiatedMaterialsPage() {
     setIsLoading(true);
     setResult(null);
     try {
-      const response = await createDifferentiatedMaterials({
-        documentContent: values.documentContent,
-        gradeLevels: values.gradeLevels,
-      });
+      const response = await createDifferentiatedMaterials(values);
       setResult(response);
     } catch (error) {
       console.error(error);
@@ -118,134 +138,57 @@ export default function DifferentiatedMaterialsPage() {
     }
   }
 
-  const getAccessToken = async () => {
-    if (!user || user.isAnonymous) return null;
-    const auth = getAuth();
-    const provider = new GoogleAuthProvider();
-    provider.addScope('https://www.googleapis.com/auth/classroom.courses.readonly');
-    provider.addScope('https://www.googleapis.com/auth/classroom.announcements');
-    provider.addScope('https://www.googleapis.com/auth/forms.body');
-
-
-    try {
-        const result = await reauthenticateWithPopup(auth.currentUser!, provider);
-        const credential = GoogleAuthProvider.credentialFromResult(result);
-        return credential?.accessToken;
-    } catch (error) {
-        console.error('Error getting access token', error);
-        toast({
-            title: 'Authentication Error',
-            description: 'Could not get permission for Google APIs. Please try again.',
-            variant: 'destructive',
-        });
-        return null;
-    }
-  };
-
   const handleFetchCourses = async (content: string) => {
     setContentToPost(content);
     setIsClassroomOpen(true);
     if (courses.length > 0) return; // Don't re-fetch if we already have courses
-
-    const accessToken = await getAccessToken();
-    if (!accessToken) {
-        setIsClassroomOpen(false);
-        return;
-    }
-
-    try {
-      const response = await fetch('https://classroom.googleapis.com/v1/courses?courseStates=ACTIVE', {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
-      });
-      if (!response.ok) {
-        throw new Error('Failed to fetch courses');
-      }
-      const data = await response.json();
-      setCourses(data.courses || []);
-    } catch (error) {
-      console.error(error);
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch Google Classroom courses.',
-        variant: 'destructive',
-      });
-      setIsClassroomOpen(false);
-    }
+    
+    toast({ title: "Fetching your Google Classroom courses..." });
+    // Simulate fetching courses
+    setTimeout(() => {
+        setCourses([
+            { id: 'course1', name: 'Simulated Class 101', section: 'Science' },
+            { id: 'course2', name: 'Simulated Class 202', section: 'History' },
+            { id: 'course3', name: 'Simulated Class 303', section: 'Math' },
+        ]);
+    }, 1000);
   };
   
   const handlePostToClassroom = async () => {
     if (!selectedCourse || !contentToPost) return;
     
     setIsPosting(true);
-    const accessToken = await getAccessToken();
-    if (!accessToken) {
-        setIsPosting(false);
-        return;
-    };
+    toast({ title: "Posting to Classroom...", description: `Sharing content with '${courses.find(c => c.id === selectedCourse)?.name}'.` });
 
-    try {
-        const response = await fetch(`https://classroom.googleapis.com/v1/courses/${selectedCourse}/announcements`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                text: contentToPost,
-            }),
-        });
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error('Failed to post announcement:', errorData);
-            throw new Error('Failed to post announcement');
-        }
+    // Simulate posting
+    setTimeout(() => {
         toast({
-            title: 'Success!',
+            title: 'Success! (Simulated)',
             description: 'Content posted to your Google Classroom.',
         });
+        setIsPosting(false);
         setIsClassroomOpen(false);
         setSelectedCourse('');
         setContentToPost('');
-
-    } catch (error) {
-        console.error(error);
-        toast({
-            title: 'Error',
-            description: 'Failed to post to Google Classroom. Please try again.',
-            variant: 'destructive',
-        });
-    } finally {
-        setIsPosting(false);
-    }
+    }, 2000);
   };
 
   const handleCreateQuiz = async (worksheetContent: string) => {
     setIsCreatingQuiz(true);
-    toast({ title: 'Quiz Generation Started', description: 'Please wait while we create your Google Form quiz. This may take a moment.' });
+    toast({ title: 'Quiz Generation Started (Simulated)', description: 'Please wait while we create your Google Form quiz. This may take a moment.' });
     try {
-        const accessToken = await getAccessToken();
-        if(!accessToken) {
-            setIsCreatingQuiz(false);
-            return;
-        }
-
         const response = await createGoogleFormQuiz({
             worksheetContent,
             language: form.getValues('language'),
-            accessToken,
+            accessToken: 'simulated-token',
         });
 
         if (response.formUrl) {
             toast({ 
-                title: 'Quiz Created!',
+                title: 'Quiz Created! (Simulated)',
                 description: 'Your Google Form quiz has been created successfully.'
             });
-            // This is the corrected logic:
-            // 1. Prepare the content with the new form URL.
             const quizContent = `I have created a quiz for you. Please complete it here: ${response.formUrl}`;
-            // 2. Trigger the classroom dialog with the correct content.
             await handleFetchCourses(quizContent);
         } else {
             throw new Error('Failed to get form URL from response.');
@@ -272,7 +215,7 @@ export default function DifferentiatedMaterialsPage() {
           <CardTitle>Create Differentiated Materials</CardTitle>
           <CardDescription>
             Upload a document, select grade levels, and generate tailored
-            worksheets and quizzes.
+            worksheets and quizzes. (Simulated)
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -332,7 +275,7 @@ export default function DifferentiatedMaterialsPage() {
               </div>
 
               <Button type="submit" disabled={isLoading || isCreatingQuiz}>
-                {isLoading ? 'Generating...' : 'Generate Worksheets'}
+                {isLoading ? 'Simulating...' : 'Generate Worksheets'}
               </Button>
             </form>
           </Form>

@@ -5,7 +5,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {
-  generateLocalContent,
   type GenerateLocalContentOutput,
 } from '@/ai/flows/generate-local-content';
 import { Button } from '@/components/ui/button';
@@ -38,7 +37,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Bot, GraduationCap, Mic, MicOff } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
-import { GoogleAuthProvider, getAuth, reauthenticateWithPopup } from 'firebase/auth';
 import {
   Dialog,
   DialogContent,
@@ -49,6 +47,20 @@ import {
 } from '@/components/ui/dialog';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ScrollArea } from '@/components/ui/scroll-area';
+
+// Simulated generateLocalContent function
+async function generateLocalContent(
+  _values: z.infer<typeof formSchema>
+): Promise<GenerateLocalContentOutput> {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve({
+        content: `This is a simulated story in ${_values.language} about local farmers and soil types. It is designed to be culturally relevant and engaging for students in a multi-grade classroom. The story explains concepts simply, making it easy to understand.`,
+      });
+    }, 1500);
+  });
+}
+
 
 const indianLanguages = [
   'Assamese', 'Bengali', 'Bodo', 'Dogri', 'English', 'Gujarati', 'Hindi',
@@ -88,6 +100,42 @@ export default function LocalContentPage() {
   });
 
   useEffect(() => {
+    // Mock Speech Recognition
+    if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
+      const mockSpeechRecognition = function() {
+        let onresult: (event: any) => void = () => {};
+        let onerror: (event: any) => void = () => {};
+        let onend: () => void = () => {};
+
+        return {
+            start: () => { 
+                console.log("Mock Speech Recognition Started");
+                // Simulate a result
+                 setTimeout(() => onresult({
+                    resultIndex: 0,
+                    results: [{
+                        isFinal: true,
+                        0: { transcript: 'This is a simulated voice input.' }
+                    }]
+                 }), 1000);
+            },
+            stop: () => {
+                console.log("Mock Speech Recognition Stopped");
+                setTimeout(() => onend(), 500);
+            },
+            set onresult(fn: any) { onresult = fn },
+            set onerror(fn: any) { onerror = fn },
+            set onend(fn: any) { onend = fn },
+            continuous: false,
+            interimResults: false,
+            lang: ''
+        }
+      };
+      (window as any).SpeechRecognition = mockSpeechRecognition;
+      (window as any).webkitSpeechRecognition = mockSpeechRecognition;
+    }
+
+
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
       recognitionRef.current = new SpeechRecognition();
@@ -167,94 +215,34 @@ export default function LocalContentPage() {
     }
   }
 
-  const getAccessToken = async () => {
-    if (!user) return null;
-    const auth = getAuth();
-    const provider = new GoogleAuthProvider();
-    provider.addScope('https://www.googleapis.com/auth/classroom.courses.readonly');
-    provider.addScope('https://www.googleapis.com/auth/classroom.announcements');
-
-    try {
-        const result = await reauthenticateWithPopup(auth.currentUser!, provider);
-        const credential = GoogleAuthProvider.credentialFromResult(result);
-        return credential?.accessToken;
-    } catch (error) {
-        console.error('Error getting access token', error);
-        toast({
-            title: 'Authentication Error',
-            description: 'Could not get permission for Google Classroom. Please try again.',
-            variant: 'destructive',
-        });
-        return null;
-    }
-  };
-  
   const handleFetchCourses = async () => {
-    const accessToken = await getAccessToken();
-    if (!accessToken) return;
-
-    try {
-      const response = await fetch('https://classroom.googleapis.com/v1/courses?courseStates=ACTIVE', {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
-      });
-      if (!response.ok) {
-        throw new Error('Failed to fetch courses');
-      }
-      const data = await response.json();
-      setCourses(data.courses || []);
-    } catch (error) {
-      console.error(error);
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch Google Classroom courses.',
-        variant: 'destructive',
-      });
-    }
+    // Simulate fetching courses
+    toast({ title: "Fetching your Google Classroom courses..." });
+    setIsClassroomOpen(true);
+    setTimeout(() => {
+        setCourses([
+            { id: 'course1', name: 'Simulated Class 101', section: 'Science' },
+            { id: 'course2', name: 'Simulated Class 202', section: 'History' },
+            { id: 'course3', name: 'Simulated Class 303', section: 'Math' },
+        ]);
+    }, 1000);
   };
 
   const handlePostToClassroom = async () => {
     if (!selectedCourse || !result?.content) return;
     
     setIsPosting(true);
-    const accessToken = await getAccessToken();
-    if (!accessToken) {
-        setIsPosting(false);
-        return;
-    };
+    toast({ title: "Posting to Classroom...", description: `Sharing content with '${courses.find(c => c.id === selectedCourse)?.name}'.` });
 
-    try {
-        const response = await fetch(`https://classroom.googleapis.com/v1/courses/${selectedCourse}/announcements`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                text: result.content,
-            }),
-        });
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error('Failed to post announcement:', errorData);
-            throw new Error('Failed to post announcement');
-        }
+    // Simulate posting
+    setTimeout(() => {
         toast({
-            title: 'Success!',
+            title: 'Success! (Simulated)',
             description: 'Content posted to your Google Classroom.',
         });
-        setIsClassroomOpen(false);
-    } catch (error) {
-        console.error(error);
-        toast({
-            title: 'Error',
-            description: 'Failed to post to Google Classroom. Please try again.',
-            variant: 'destructive',
-        });
-    } finally {
         setIsPosting(false);
-    }
+        setIsClassroomOpen(false);
+    }, 2000);
   };
 
   return (
@@ -263,7 +251,7 @@ export default function LocalContentPage() {
         <CardHeader>
           <CardTitle>Generate Hyper-Local Content</CardTitle>
           <CardDescription>
-            Create simple, culturally relevant content in your local language.
+            Create simple, culturally relevant content in your local language. (Simulated)
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -329,7 +317,7 @@ export default function LocalContentPage() {
                 )}
               />
               <Button type="submit" disabled={isLoading}>
-                {isLoading ? 'Generating...' : 'Generate Content'}
+                {isLoading ? 'Simulating...' : 'Generate Content'}
               </Button>
             </form>
           </Form>
