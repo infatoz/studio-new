@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/icons';
 import {
   BookText,
+  FileQuestion,
   GraduationCap,
   Image as ImageIcon,
   LayoutDashboard,
@@ -49,6 +50,7 @@ const navItems = [
   },
   { href: '/knowledge-base', icon: Lightbulb, label: 'Knowledge Base' },
   { href: '/visual-aids', icon: ImageIcon, label: 'Visual Aids' },
+  { href: '/quiz-generator', icon: FileQuestion, label: 'Quiz Generator' },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {

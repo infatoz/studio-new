@@ -1,3 +1,4 @@
+
 import {
   Card,
   CardContent,
@@ -11,6 +12,7 @@ import Link from 'next/link';
 import {
   ArrowRight,
   BookText,
+  FileQuestion,
   GraduationCap,
   Lightbulb,
   Image as ImageIcon,
@@ -54,6 +56,14 @@ const features = [
     href: '/visual-aids',
     cta: 'Design a Visual',
   },
+  {
+    icon: FileQuestion,
+    title: 'Quiz Generator',
+    description:
+      'Quickly generate multiple-choice quizzes on any topic and instantly create a shareable Google Form for assessment.',
+    href: '/quiz-generator',
+    cta: 'Create a Quiz',
+  },
 ];
 
 export default function DashboardPage() {
@@ -69,7 +79,7 @@ export default function DashboardPage() {
         </p>
       </header>
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
         {features.map((feature) => (
           <Card
             key={feature.title}
