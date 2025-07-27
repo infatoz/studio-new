@@ -1,3 +1,4 @@
+
 // src/ai/flows/generate-interactive-story.ts
 'use server';
 /**
@@ -12,14 +13,14 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import wav from 'wav';
 
-async function textToSpeech(text: string): Promise<string> {
+async function textToSpeech(text: string, voice: string): Promise<string> {
   const { media } = await ai.generate({
     model: 'googleai/gemini-2.5-flash-preview-tts',
     config: {
       responseModalities: ['AUDIO'],
       speechConfig: {
         voiceConfig: {
-          prebuiltVoiceConfig: { voiceName: 'Algenib' },
+          prebuiltVoiceConfig: { voiceName: voice || 'Algenib' },
         },
       },
     },
@@ -53,6 +54,7 @@ async function textToSpeech(text: string): Promise<string> {
 const GenerateInteractiveStoryInputSchema = z.object({
   topic: z.string().describe('The topic or theme for the story.'),
   language: z.string().describe('The language for the story.'),
+  voice: z.string().describe('The prebuilt voice to use for narration.'),
   previousContext: z.string().optional().describe('The story context from previous turns.'),
   studentSuggestion: z.string().optional().describe('A suggestion from a student on what should happen next.'),
 });
@@ -72,7 +74,6 @@ const storyPrompt = ai.definePrompt({
     prompt: `You are a master storyteller for children. Create a short, engaging story segment in {{{language}}}.
 
 Topic: {{{topic}}}
-
 {{#if previousContext}}
 This is the story so far:
 "{{{previousContext}}}"
@@ -80,7 +81,7 @@ This is the story so far:
 A student suggested this should happen next: "{{{studentSuggestion}}}"
 Incorporate the student's suggestion into the next part of the story. Keep it simple and continue the narrative.
 {{else}}
-Start a new, simple story based on the topic. Keep the first part very short, about two or three sentences, and end with a question asking what should happen next.
+Start a new, simple story based on the topic. Keep the first part very short, about two or three sentences, and end with a question asking what should happen next. If the topic is 'A random topic', please invent a fun and engaging topic yourself.
 {{/if}}
 
 Your response should only be the next part of the story.
@@ -103,7 +104,7 @@ const generateInteractiveStoryFlow = ai.defineFlow(
     }
     
     // Generate TTS audio from the story segment
-    const audioDataUri = await textToSpeech(storySegment);
+    const audioDataUri = await textToSpeech(storySegment, input.voice);
     
     return {
         storySegment,

@@ -29,12 +29,37 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Bot, Play, Send, Sparkles, StopCircle, BookOpen } from 'lucide-react';
+import { Bot, Play, Send, Sparkles, StopCircle, BookOpen, Download, Share2, Dices } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+const voices = [
+    { id: 'Algenib', name: 'Algenib (Female)' },
+    { id: 'Achernar', name: 'Achernar (Male)' },
+    { id: 'Enif', name: 'Enif (Female)' },
+    { id: 'Salm', name: 'Salm (Male)' },
+    { id: 'Mirfak', name: 'Mirfak (Male)' },
+];
+
+const languages = [
+  'English', 'Spanish', 'French', 'German', 'Hindi', 'Marathi', 'Bengali', 'Tamil', 'Telugu'
+];
+
+const randomTopics = [
+    'A brave mouse on a big adventure',
+    'A lost robot trying to find its way home',
+    'A magical tree that grows candy',
+    'Two best friends who are a cat and a dog',
+    'A secret world hidden inside a seashell',
+    'An astronaut who lands on a planet made of jelly',
+    'A friendly ghost who is afraid of the dark',
+    'A group of animals starting a rock band',
+];
 
 const formSchema = z.object({
   topic: z.string().min(3, 'Please enter a topic for the story.'),
   language: z.string().min(2, 'Please specify a language.').default('English'),
+  voice: z.string().min(1, 'Please select a voice.').default('Algenib'),
 });
 
 const suggestionSchema = z.object({
@@ -53,6 +78,7 @@ export default function InteractiveStoryPage() {
     defaultValues: {
       topic: '',
       language: 'English',
+      voice: 'Algenib',
     },
   });
 
@@ -111,7 +137,7 @@ export default function InteractiveStoryPage() {
             variant: 'destructive',
         });
     } finally {
-        setIsLoading(false);
+        isLoading(false);
     }
   }
 
@@ -121,6 +147,53 @@ export default function InteractiveStoryPage() {
     form.reset();
   }
 
+  const handleDownload = () => {
+    const lastSegment = storyHistory[storyHistory.length - 1];
+    if (!lastSegment?.audioDataUri) return;
+    const link = document.createElement('a');
+    link.href = lastSegment.audioDataUri;
+    link.download = `sahayak-ai-story-segment.wav`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleShare = async () => {
+    const lastSegment = storyHistory[storyHistory.length - 1];
+    if (!lastSegment?.audioDataUri) return;
+
+    try {
+      const response = await fetch(lastSegment.audioDataUri);
+      const blob = await response.blob();
+      const file = new File([blob], 'sahayak-ai-story.wav', { type: 'audio/wav' });
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'Interactive Story Audio',
+          text: `Listen to this story segment about "${form.getValues('topic')}"`,
+        });
+      } else {
+         toast({
+          title: 'Sharing Not Supported',
+          description: "Your browser doesn't support sharing files.",
+          variant: 'destructive'
+        })
+      }
+    } catch (error) {
+      console.error('Error sharing:', error);
+       toast({
+        title: 'Error',
+        description: 'Could not share the audio.',
+        variant: 'destructive'
+      })
+    }
+  };
+  
+  const handleRandomTopic = () => {
+    const randomTopic = randomTopics[Math.floor(Math.random() * randomTopics.length)];
+    form.setValue('topic', randomTopic, { shouldValidate: true });
+  }
 
   return (
     <div className="grid md:grid-cols-3 gap-8 items-start">
@@ -128,17 +201,27 @@ export default function InteractiveStoryPage() {
         <div className="md:col-span-2">
             <Card className="min-h-[600px] flex flex-col">
                 <CardHeader>
-                <div className='flex justify-between items-center'>
-                    <div>
-                        <CardTitle>Interactive Storyteller</CardTitle>
-                        <CardDescription>
-                            {isStoryStarted ? `A story about "${form.getValues('topic')}"` : "Your collaborative story will appear here."}
-                        </CardDescription>
+                    <div className='flex justify-between items-center gap-4'>
+                        <div>
+                            <CardTitle>Interactive Storyteller</CardTitle>
+                            <CardDescription>
+                                {isStoryStarted ? `A story about "${form.getValues('topic')}"` : "Your collaborative story will appear here."}
+                            </CardDescription>
+                        </div>
+                        {storyHistory.length > 0 && (
+                            <div className='flex items-center gap-2'>
+                                <audio ref={audioRef} controls className="h-10" />
+                                <Button onClick={handleDownload} variant="outline" size="icon">
+                                    <Download className='h-4 w-4' />
+                                    <span className='sr-only'>Download Audio</span>
+                                </Button>
+                                <Button onClick={handleShare} variant="outline" size="icon">
+                                    <Share2 className='h-4 w-4' />
+                                    <span className='sr-only'>Share Audio</span>
+                                </Button>
+                            </div>
+                        )}
                     </div>
-                     {storyHistory.length > 0 && (
-                        <audio ref={audioRef} controls className="h-10" />
-                    )}
-                </div>
                 </CardHeader>
                 <CardContent className='flex-1'>
                     <ScrollArea className='h-[450px] p-4 border rounded-md bg-background'>
@@ -212,25 +295,56 @@ export default function InteractiveStoryPage() {
                                 <FormItem>
                                     <FormLabel>Story Topic</FormLabel>
                                     <FormControl>
-                                    <Input placeholder="e.g., A brave mouse on a big adventure" {...field} />
+                                    <div className='flex gap-2'>
+                                        <Input placeholder="e.g., A brave mouse" {...field} />
+                                        <Button type="button" variant="outline" size="icon" onClick={handleRandomTopic}>
+                                            <Dices className='h-4 w-4'/>
+                                            <span className="sr-only">Generate Random Topic</span>
+                                        </Button>
+                                    </div>
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                                 )}
                             />
-                            <FormField
-                                control={form.control}
-                                name="language"
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Language</FormLabel>
-                                    <FormControl>
-                                    <Input placeholder="e.g., English" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField
+                                    control={form.control}
+                                    name="language"
+                                    render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Language</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {languages.map(lang => <SelectItem key={lang} value={lang}>{lang}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="voice"
+                                    render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Voice</FormLabel>
+                                         <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {voices.map(voice => <SelectItem key={voice.id} value={voice.id}>{voice.name}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
+                            </div>
                             <Button type="submit" disabled={isLoading} className='w-full'>
                                 {isLoading ? 'Starting...' : 'Start Story'}
                                 <Sparkles className='ml-2' />
