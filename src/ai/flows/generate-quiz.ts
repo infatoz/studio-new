@@ -69,8 +69,8 @@ const generateQuizFlow = ai.defineFlow(
 
     const { formUrl } = await createGoogleFormQuiz({
         worksheetContent: quizContent,
-        language,
-        accessToken,
+        language: language,
+        accessToken: accessToken,
     });
     
     return { formUrl, quizContent };
