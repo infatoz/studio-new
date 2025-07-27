@@ -105,7 +105,6 @@ const addQuestionsToFormTool = ai.defineTool(
 const CreateGoogleFormQuizInputSchema = z.object({
   worksheetContent: z.string().describe("The text content of the worksheet to base the quiz on."),
   language: z.string().describe("The language for the quiz questions and options.").default('English'),
-  accessToken: z.string().describe("The user's Google OAuth access token."),
 });
 export type CreateGoogleFormQuizInput = z.infer<typeof CreateGoogleFormQuizInputSchema>;
 
@@ -135,7 +134,7 @@ const createGoogleFormQuizFlow = ai.defineFlow(
     outputSchema: CreateGoogleFormQuizOutputSchema,
     experimentalToolAuth: [createGoogleFormTool, addQuestionsToFormTool],
   },
-  async ({ worksheetContent, language, accessToken }) => {
+  async ({ worksheetContent, language }) => {
     
     const llmResponse = await ai.generate({
         prompt: quizGenerationPrompt,
@@ -144,7 +143,6 @@ const createGoogleFormQuizFlow = ai.defineFlow(
         model: 'googleai/gemini-1.5-flash',
     });
     
-    // The model should call the tool and the output should be available in the toolCalls
     const createFormCall = llmResponse.toolCalls?.find(call => call.tool === 'createGoogleForm');
 
     if (!createFormCall) {
@@ -163,7 +161,7 @@ const createGoogleFormQuizFlow = ai.defineFlow(
 );
 
 
-export async function createGoogleFormQuiz(input: CreateGoogleFormQuizInput): Promise<CreateGoogleFormQuizOutput> {
+export async function createGoogleFormQuiz(input: CreateGoogleFormQuizInput & { accessToken: string }): Promise<CreateGoogleFormQuizOutput> {
   const { accessToken, ...rest } = input;
   // Start the flow with the access token in the state.
   return createGoogleFormQuizFlow.run({
