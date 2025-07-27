@@ -10,19 +10,23 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarInset,
-  SidebarTrigger,
   SidebarFooter,
+  SidebarTrigger,
+  SidebarGroup,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { Logo } from '@/components/icons';
 import {
+  Bell,
   BookText,
   FileQuestion,
   GraduationCap,
+  HelpCircle,
   Image as ImageIcon,
   LayoutDashboard,
   Lightbulb,
   LogOut,
+  Search,
+  Settings,
   Sparkles,
   User,
 } from 'lucide-react';
@@ -39,7 +43,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/auth-context';
 import { auth } from '@/lib/firebase';
-import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 
 const navItems = [
   { href: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -54,6 +58,14 @@ const navItems = [
   { href: '/quiz-generator', icon: FileQuestion, label: 'Quiz Generator' },
   { href: '/interactive-story', icon: Sparkles, label: 'Interactive Story' },
 ];
+
+function Logo() {
+  return (
+     <div className="flex items-center justify-center size-8 bg-primary rounded-lg text-primary-foreground font-bold text-lg">
+        S
+     </div>
+  )
+}
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -70,18 +82,27 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
   
   if (!user) {
+    // This should be handled by the AuthProvider, but as a fallback:
+    if (typeof window !== 'undefined') {
+      router.push('/login');
+    }
     return null;
   }
 
   const isGuest = user.isAnonymous;
+  const userName = isGuest ? "Guest User" : user.displayName || "User";
+  const userEmail = isGuest ? "guest@sahayak.ai" : user.email || "";
 
   return (
     <SidebarProvider>
-      <Sidebar>
+      <Sidebar variant='inset' collapsible='icon'>
         <SidebarHeader>
-          <div className="flex items-center gap-2">
-            <Logo className="size-8 text-primary" />
-            <h1 className="text-xl font-semibold">Sahayak AI</h1>
+           <div className="flex items-center gap-2 p-2">
+            <Logo />
+            <div className="flex flex-col">
+              <h2 className="text-lg font-semibold">Sahayak AI</h2>
+              <p className="text-xs text-muted-foreground">Teaching Assistant</p>
+            </div>
           </div>
         </SidebarHeader>
         <SidebarContent>
@@ -92,6 +113,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   asChild
                   isActive={pathname === item.href}
                   tooltip={{ children: item.label, side: 'right', align: 'center' }}
+                  className="justify-start [&>svg]:size-5"
                 >
                   <Link href={item.href}>
                     <item.icon />
@@ -103,39 +125,66 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="justify-start w-full gap-2 p-2 h-auto">
-                <Avatar className="size-8">
-                  <AvatarImage src={user.photoURL ?? ''} alt={user.displayName ?? 'User'} />
-                  <AvatarFallback>
-                    <User />
-                  </AvatarFallback>
-                </Avatar>
-                <div className='text-left group-data-[collapsible=icon]:hidden'>
-                    <p className='text-sm font-medium'>{isGuest ? "Guest User" : user.displayName}</p>
-                    <p className='text-xs text-muted-foreground'>{ isGuest ? "" : user.email}</p>
-                </div>
-                {isGuest && <Badge variant="secondary" className="ml-auto group-data-[collapsible=icon]:hidden">Guest</Badge>}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent side="right" align="start">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout}>
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Logout</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+           <SidebarGroup className="p-2 mt-auto">
+             <div className="p-4 rounded-lg bg-muted flex flex-col items-center text-center gap-2 group-data-[collapsible=icon]:hidden">
+                <HelpCircle className="size-8 text-primary"/>
+                <p className="font-semibold">Need Help?</p>
+                <p className="text-xs text-muted-foreground">Get AI-powered assistance</p>
+                <Button size="sm" className="w-full mt-2">Get Help</Button>
+            </div>
+          </SidebarGroup>
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset className="bg-background">
-        <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
+      <SidebarInset>
+        <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
           <SidebarTrigger className="md:hidden" />
-          <h1 className="text-lg font-semibold md:text-xl">
-            {navItems.find((item) => item.href === pathname)?.label ?? 'Dashboard'}
-          </h1>
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground size-5" />
+            <Input
+              placeholder="Search content, lessons, tools..."
+              className="w-full md:w-2/3 lg:w-1/3 pl-10 bg-background"
+            />
+          </div>
+          <Button className='gap-2'>
+            <Sparkles className="size-5" />
+            <span className="hidden sm:inline">AI Assistant</span>
+          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon">
+              <Bell className="size-5" />
+              <span className="sr-only">Notifications</span>
+            </Button>
+             <Button variant="ghost" size="icon">
+              <Settings className="size-5" />
+              <span className="sr-only">Settings</span>
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="justify-start gap-2 px-2 h-auto">
+                  <Avatar className="size-9">
+                    <AvatarImage src={user.photoURL ?? ''} alt={userName} />
+                    <AvatarFallback>
+                      <User />
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className='text-left hidden lg:block'>
+                      <p className='text-sm font-medium'>{userName}</p>
+                      <p className='text-xs text-muted-foreground'>
+                        {isGuest ? "Teacher" : (userEmail || "Teacher")}
+                      </p>
+                  </div>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="right" align="end">
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Logout</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </header>
         <main className="flex-1 p-4 md:p-6">{children}</main>
       </SidebarInset>
