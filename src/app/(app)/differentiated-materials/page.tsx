@@ -5,9 +5,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {
+  createDifferentiatedMaterials,
   type CreateDifferentiatedMaterialsOutput,
 } from '@/ai/flows/create-differentiated-materials';
 import {
+    createGoogleFormQuiz,
     type CreateGoogleFormQuizOutput,
 } from '@/ai/flows/create-google-form-quiz';
 
@@ -46,34 +48,6 @@ const formSchema = z.object({
   language: z.string().min(2, 'Please specify a language.').default('English'),
 });
 
-
-// Simulated AI flow functions
-async function createDifferentiatedMaterials(
-    _values: z.infer<typeof formSchema>
-  ): Promise<CreateDifferentiatedMaterialsOutput> {
-    const grades = _values.gradeLevels.split(',').map(g => g.trim());
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          worksheets: grades.map(grade => ({
-            gradeLevel: grade,
-            worksheetContent: `This is a simulated worksheet for Grade ${grade}. It includes age-appropriate questions and activities based on the uploaded document. The content covers key concepts in a way that is easy for Grade ${grade} students to understand.`
-          }))
-        });
-      }, 2000);
-    });
-}
-
-async function createGoogleFormQuiz(
-    _input: { worksheetContent: string; language: string; accessToken: string | null }
-): Promise<CreateGoogleFormQuizOutput> {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            resolve({ formUrl: 'https://docs.google.com/forms/d/e/simulated-form-link/viewform' });
-        }, 2500);
-    });
-}
-
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -96,7 +70,7 @@ export default function DifferentiatedMaterialsPage() {
 
 
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, getAccessToken } = useAuth();
   const isGuest = user?.isAnonymous ?? true;
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -114,9 +88,14 @@ export default function DifferentiatedMaterialsPage() {
   ) => {
     const file = e.target.files?.[0];
     if (file) {
-        toast({ title: 'File Selected!', description: `Simulating upload of '${file.name}'.`});
-        // In a real scenario, we'd process the file. Here we just set a dummy string.
-        fieldChange('simulated-file-content-as-base64');
+      try {
+        const base64String = await fileToBase64(file);
+        fieldChange(base64String);
+        toast({ title: 'File Uploaded!', description: `Successfully processed '${file.name}'.` });
+      } catch (error) {
+        console.error("Error converting file to base64", error);
+        toast({ title: 'File Error', description: 'Could not process the file.', variant: 'destructive' });
+      }
     }
   };
 
@@ -174,18 +153,28 @@ export default function DifferentiatedMaterialsPage() {
   };
 
   const handleCreateQuiz = async (worksheetContent: string) => {
+    if (isGuest) {
+      toast({ title: 'Feature Unavailable', description: 'Please sign in with Google to create quizzes.', variant: 'destructive'});
+      return;
+    }
+    
     setIsCreatingQuiz(true);
-    toast({ title: 'Quiz Generation Started (Simulated)', description: 'Please wait while we create your Google Form quiz. This may take a moment.' });
+    toast({ title: 'Quiz Generation Started', description: 'Please wait while we create your Google Form quiz. This may take a moment.' });
     try {
+        const accessToken = await getAccessToken('https://www.googleapis.com/auth/forms.body');
+        if (!accessToken) {
+          throw new Error('Could not get access token.');
+        }
+
         const response = await createGoogleFormQuiz({
             worksheetContent,
             language: form.getValues('language'),
-            accessToken: 'simulated-token',
+            accessToken,
         });
 
         if (response.formUrl) {
             toast({ 
-                title: 'Quiz Created! (Simulated)',
+                title: 'Quiz Created!',
                 description: 'Your Google Form quiz has been created successfully.'
             });
             const quizContent = `I have created a quiz for you. Please complete it here: ${response.formUrl}`;
@@ -198,7 +187,7 @@ export default function DifferentiatedMaterialsPage() {
         console.error(error);
         toast({
             title: 'Quiz Generation Failed',
-            description: 'Could not create the Google Form quiz. Please try again.',
+            description: 'Could not create the Google Form quiz. Ensure you have granted permission and try again.',
             variant: 'destructive',
         });
     } finally {
@@ -215,7 +204,7 @@ export default function DifferentiatedMaterialsPage() {
           <CardTitle>Create Differentiated Materials</CardTitle>
           <CardDescription>
             Upload a document, select grade levels, and generate tailored
-            worksheets and quizzes. (Simulated)
+            worksheets and quizzes.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -275,7 +264,7 @@ export default function DifferentiatedMaterialsPage() {
               </div>
 
               <Button type="submit" disabled={isLoading || isCreatingQuiz}>
-                {isLoading ? 'Simulating...' : 'Generate Worksheets'}
+                {isLoading ? 'Generating...' : 'Generate Worksheets'}
               </Button>
             </form>
           </Form>

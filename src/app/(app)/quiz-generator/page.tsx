@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { type GenerateQuizOutput } from '@/ai/flows/generate-quiz';
+import { generateQuiz, type GenerateQuizOutput } from '@/ai/flows/generate-quiz';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -42,20 +42,6 @@ const formSchema = z.object({
 });
 
 
-// Simulated AI flow functions
-async function generateQuiz(
-    _values: z.infer<typeof formSchema> & { accessToken: string | null }
-  ): Promise<GenerateQuizOutput> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          quizContent: `Quiz on ${_values.topic}\n\n1. What is the main concept of ${_values.topic}?\n a) Option A\n b) Option B\n c) Option C\n d) Option D\n\n ... and so on for ${_values.numQuestions} questions.`,
-          formUrl: 'https://docs.google.com/forms/d/e/simulated-quiz-link/viewform' 
-        });
-      }, 2000);
-    });
-}
-
 export default function QuizGeneratorPage() {
   const [result, setResult] =
     useState<GenerateQuizOutput | null>(null);
@@ -67,7 +53,7 @@ export default function QuizGeneratorPage() {
   const [contentToPost, setContentToPost] = useState('');
 
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, getAccessToken } = useAuth();
   const isGuest = user?.isAnonymous ?? true;
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -80,16 +66,26 @@ export default function QuizGeneratorPage() {
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (isGuest) {
+        toast({ title: 'Feature Unavailable', description: 'Please sign in with Google to create quizzes.', variant: 'destructive'});
+        return;
+    }
+    
     setIsLoading(true);
     setResult(null);
     try {
-      const response = await generateQuiz({ ...values, accessToken: 'simulated-token'});
+      const accessToken = await getAccessToken('https://www.googleapis.com/auth/forms.body');
+       if (!accessToken) {
+          throw new Error('Could not get access token.');
+        }
+
+      const response = await generateQuiz({ ...values, accessToken });
       setResult(response);
     } catch (error) {
       console.error(error);
       toast({
         title: 'Error',
-        description: 'Failed to generate quiz. Please try again.',
+        description: 'Failed to generate quiz. Please ensure you have granted permissions and try again.',
         variant: 'destructive',
       });
     } finally {
@@ -143,7 +139,7 @@ export default function QuizGeneratorPage() {
         <CardHeader>
           <CardTitle>Quiz Generator</CardTitle>
           <CardDescription>
-            Generate a multiple-choice quiz on any topic and get a shareable Google Form link. (Simulated)
+            Generate a multiple-choice quiz on any topic and get a shareable Google Form link.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -196,7 +192,7 @@ export default function QuizGeneratorPage() {
               />
 
               <Button type="submit" disabled={isLoading}>
-                {isLoading ? 'Simulating...' : 'Generate Quiz'}
+                {isLoading ? 'Generating...' : 'Generate Quiz'}
                 <FileQuestion className='ml-2' />
               </Button>
             </form>
