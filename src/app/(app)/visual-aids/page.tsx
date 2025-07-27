@@ -251,7 +251,7 @@ export default function VisualAidsPage() {
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select a style" />
-                          </Trigger>
+                          </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="Simple Line Drawing">Simple Line Drawing</SelectItem>
