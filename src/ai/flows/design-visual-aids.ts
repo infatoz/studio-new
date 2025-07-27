@@ -13,6 +13,8 @@ import {z} from 'genkit';
 
 const DesignVisualAidsInputSchema = z.object({
   description: z.string().describe('The description of the visual aid to generate.'),
+  subject: z.string().describe('The subject for which the visual aid is being generated (e.g., Biology, Physics).'),
+  style: z.string().describe('The artistic style of the image (e.g., Simple Line Drawing, Photorealistic).'),
 });
 export type DesignVisualAidsInput = z.infer<typeof DesignVisualAidsInputSchema>;
 
@@ -28,10 +30,14 @@ export async function designVisualAids(input: DesignVisualAidsInput): Promise<De
 const designVisualAidsPrompt = ai.definePrompt({
   name: 'designVisualAidsPrompt',
   input: {schema: DesignVisualAidsInputSchema},
-  output: {schema: DesignVisualAidsOutputSchema},
-  prompt: `Generate a simple line drawing or chart based on the following description that can be easily replicated on a blackboard:
+  prompt: `You are an expert visual aid designer for educational purposes. Generate an accurate and clear image for a teacher.
 
-{{{description}}}`, 
+Subject: {{{subject}}}
+Style: {{{style}}}
+Description: {{{description}}}
+
+If the style is 'Simple Line Drawing' or 'Diagram/Chart', create an image that can be easily replicated on a blackboard.
+For other styles, create a high-quality, illustrative image suitable for teaching.`,
 });
 
 const designVisualAidsFlow = ai.defineFlow(
@@ -41,9 +47,10 @@ const designVisualAidsFlow = ai.defineFlow(
     outputSchema: DesignVisualAidsOutputSchema,
   },
   async input => {
+    const llmResponse = await designVisualAidsPrompt(input);
     const {media} = await ai.generate({
         model: 'googleai/gemini-2.0-flash-preview-image-generation',
-        prompt: input.description,
+        prompt: llmResponse.text(),
         config: {
           responseModalities: ['TEXT', 'IMAGE'],
         },

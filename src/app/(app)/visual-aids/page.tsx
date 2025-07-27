@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {
+  designVisualAids,
   type DesignVisualAidsOutput,
 } from '@/ai/flows/design-visual-aids';
 import { Button } from '@/components/ui/button';
@@ -28,26 +29,17 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import { Bot } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const formSchema = z.object({
   description: z
     .string()
     .min(10, 'Description must be at least 10 characters.'),
+  subject: z.string().min(2, "Please provide a subject."),
+  style: z.string().min(1, "Please select a style."),
 });
 
-// Simulated designVisualAids function
-async function designVisualAids(
-    _values: z.infer<typeof formSchema>
-  ): Promise<DesignVisualAidsOutput> {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            resolve({
-                // Using a real placeholder service to simulate the image
-                image: 'https://placehold.co/400x400.png',
-            });
-        }, 2000);
-    });
-}
 
 export default function VisualAidsPage() {
   const [result, setResult] = useState<DesignVisualAidsOutput | null>(null);
@@ -58,6 +50,8 @@ export default function VisualAidsPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       description: '',
+      subject: 'Science',
+      style: 'Simple Line Drawing',
     },
   });
 
@@ -85,8 +79,7 @@ export default function VisualAidsPage() {
         <CardHeader>
           <CardTitle>Design Visual Aids</CardTitle>
           <CardDescription>
-            Describe a visual aid, and the AI will generate a simple image for
-            your blackboard. (Simulated)
+            Describe a visual aid, and the AI will generate a an accurate image for your lesson.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -109,19 +102,58 @@ export default function VisualAidsPage() {
                   </FormItem>
                 )}
               />
+              <div className="grid sm:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="subject"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Subject</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., Biology, Physics" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="style"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Image Style</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a style" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Simple Line Drawing">Simple Line Drawing</SelectItem>
+                          <SelectItem value="Diagram/Chart">Diagram/Chart</SelectItem>
+                          <SelectItem value="Photorealistic">Photorealistic</SelectItem>
+                          <SelectItem value="Cartoon">Cartoon</SelectItem>
+                          <SelectItem value="Watercolor">Watercolor</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
               <Button type="submit" disabled={isLoading}>
-                {isLoading ? 'Simulating...' : 'Design Visual Aid'}
+                {isLoading ? 'Generating...' : 'Design Visual Aid'}
               </Button>
             </form>
           </Form>
         </CardContent>
       </Card>
-      <Card className="min-h-[300px]">
+      <Card className="min-h-[400px] flex flex-col">
         <CardHeader>
           <CardTitle>Generated Visual Aid</CardTitle>
           <CardDescription>The generated image will appear here.</CardDescription>
         </CardHeader>
-        <CardContent className="flex items-center justify-center">
+        <CardContent className="flex-1 flex items-center justify-center">
           {isLoading && <Skeleton className="h-64 w-full" />}
           {result?.image && (
             <Image
@@ -129,7 +161,7 @@ export default function VisualAidsPage() {
               alt="Generated visual aid"
               width={400}
               height={400}
-              className="rounded-lg border"
+              className="rounded-lg border aspect-square object-contain"
               data-ai-hint="diagram illustration"
             />
           )}
