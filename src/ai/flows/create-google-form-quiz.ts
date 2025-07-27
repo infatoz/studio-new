@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -114,7 +115,7 @@ const CreateGoogleFormQuizOutputSchema = z.object({
 export type CreateGoogleFormQuizOutput = z.infer<typeof CreateGoogleFormQuizOutputSchema>;
 
 
-const quizGenerationPrompt = `
+const quizGenerationPromptTemplate = `
     Based on the following worksheet content, generate a 5-question multiple-choice quiz in {{{language}}}.
     The quiz should be titled "Quiz".
     For each question, provide 4 options.
@@ -137,7 +138,7 @@ const createGoogleFormQuizFlow = ai.defineFlow(
   async ({ worksheetContent, language }) => {
     
     const llmResponse = await ai.generate({
-        prompt: quizGenerationPrompt,
+        prompt: quizGenerationPromptTemplate,
         input: { worksheetContent, language },
         tools: [createGoogleFormTool, addQuestionsToFormTool],
         model: 'googleai/gemini-1.5-flash',
@@ -162,10 +163,10 @@ const createGoogleFormQuizFlow = ai.defineFlow(
 
 
 export async function createGoogleFormQuiz(input: CreateGoogleFormQuizInput & { accessToken: string }): Promise<CreateGoogleFormQuizOutput> {
-  const { accessToken, ...rest } = input;
+  const { accessToken, ...flowInput } = input;
   // Start the flow with the access token in the state.
   return createGoogleFormQuizFlow.run({
-    input: rest,
+    input: flowInput,
     state: { accessToken },
   });
 }

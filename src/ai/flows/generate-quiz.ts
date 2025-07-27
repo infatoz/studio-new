@@ -67,6 +67,10 @@ const generateQuizFlow = ai.defineFlow(
     const { output } = await quizGenerationPrompt({ topic, numQuestions, language });
     const quizContent = output!.quizContent;
 
+    if (!quizContent) {
+        throw new Error("Failed to generate quiz content.");
+    }
+
     const { formUrl } = await createGoogleFormQuiz({
         worksheetContent: quizContent,
         language: language,
