@@ -50,7 +50,7 @@ const designVisualAidsFlow = ai.defineFlow(
     const llmResponse = await designVisualAidsPrompt(input);
     const {media} = await ai.generate({
         model: 'googleai/gemini-2.0-flash-preview-image-generation',
-        prompt: llmResponse.text(),
+        prompt: llmResponse.text,
         config: {
           responseModalities: ['TEXT', 'IMAGE'],
         },
