@@ -16,6 +16,7 @@ import {
   GraduationCap,
   Lightbulb,
   Image as ImageIcon,
+  Sparkles,
 } from 'lucide-react';
 import type { Metadata } from 'next';
 
@@ -63,6 +64,14 @@ const features = [
       'Quickly generate multiple-choice quizzes on any topic and instantly create a shareable Google Form for assessment.',
     href: '/quiz-generator',
     cta: 'Create a Quiz',
+  },
+  {
+    icon: Sparkles,
+    title: 'Interactive Storyteller',
+    description:
+      'Create a collaborative story with your class! The AI generates a story with audio and students decide what happens next.',
+    href: '/interactive-story',
+    cta: 'Start a Story',
   },
 ];
 

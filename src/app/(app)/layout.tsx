@@ -23,6 +23,7 @@ import {
   LayoutDashboard,
   Lightbulb,
   LogOut,
+  Sparkles,
   User,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -51,6 +52,7 @@ const navItems = [
   { href: '/knowledge-base', icon: Lightbulb, label: 'Knowledge Base' },
   { href: '/visual-aids', icon: ImageIcon, label: 'Visual Aids' },
   { href: '/quiz-generator', icon: FileQuestion, label: 'Quiz Generator' },
+  { href: '/interactive-story', icon: Sparkles, label: 'Interactive Story' },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
