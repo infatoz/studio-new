@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import {
   Bell,
   BookText,
+  ClipboardList,
   FileQuestion,
   GraduationCap,
   HelpCircle,
@@ -57,6 +58,7 @@ const navItems = [
   { href: '/visual-aids', icon: ImageIcon, label: 'Visual Aids' },
   { href: '/quiz-generator', icon: FileQuestion, label: 'Quiz Generator' },
   { href: '/interactive-story', icon: Sparkles, label: 'Interactive Story' },
+  { href: '/lesson-planner', icon: ClipboardList, label: 'Lesson Planner' },
 ];
 
 function Logo() {
