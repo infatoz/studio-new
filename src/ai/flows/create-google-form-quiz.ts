@@ -119,6 +119,9 @@ const quizGenerationPrompt = `
     Based on the following worksheet content, generate a 5-question multiple-choice quiz in {{{language}}}.
     The quiz should be titled "Quiz".
     For each question, provide 4 options.
+    First, call the createGoogleForm tool to create the form.
+    Then, call the addQuestionsToForm tool with the generated questions and the formId from the previous step.
+    Finally, return the formUrl.
 
     Worksheet Content:
     {{{worksheetContent}}}
@@ -130,19 +133,15 @@ const createGoogleFormQuizFlow = ai.defineFlow(
     name: 'createGoogleFormQuizFlow',
     inputSchema: CreateGoogleFormQuizInputSchema,
     outputSchema: CreateGoogleFormQuizOutputSchema,
+    experimentalToolAuth: [createGoogleFormTool, addQuestionsToFormTool],
   },
   async ({ worksheetContent, language, accessToken }) => {
-
+    
     const llmResponse = await ai.generate({
         prompt: quizGenerationPrompt,
         input: { worksheetContent, language },
         tools: [createGoogleFormTool, addQuestionsToFormTool],
         model: 'googleai/gemini-1.5-flash',
-        toolConfig: {
-            definition: {
-                flowState: { accessToken }
-            }
-        }
     });
     
     // The model should call the tool and the output should be available in the toolCalls
@@ -165,5 +164,10 @@ const createGoogleFormQuizFlow = ai.defineFlow(
 
 
 export async function createGoogleFormQuiz(input: CreateGoogleFormQuizInput): Promise<CreateGoogleFormQuizOutput> {
-  return createGoogleFormQuizFlow(input);
+  const { accessToken, ...rest } = input;
+  // Start the flow with the access token in the state.
+  return createGoogleFormQuizFlow.run({
+    input: rest,
+    state: { accessToken },
+  });
 }
