@@ -146,7 +146,7 @@ const createGoogleFormQuizFlow = ai.defineFlow(
     });
     
     // The model should call the tool and the output should be available in the toolCalls
-    const createFormCall = llmResponse.toolCalls()?.find(call => call.tool === 'createGoogleForm');
+    const createFormCall = llmResponse.toolCalls?.find(call => call.tool === 'createGoogleForm');
 
     if (!createFormCall) {
         throw new Error('Could not find the call to createGoogleForm tool.');
