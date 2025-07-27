@@ -82,10 +82,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
   
   if (!user) {
-    // This should be handled by the AuthProvider, but as a fallback:
-    if (typeof window !== 'undefined') {
-      router.push('/login');
-    }
+    // The AuthProvider will handle the redirect.
+    // Returning null here prevents the layout from rendering while the redirect is in progress.
     return null;
   }
 
